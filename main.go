@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/jmromer/dispatch/cmd"
+import "github.com/jmromer/pd/cmd"
 
 func main() {
 	cmd.Execute()

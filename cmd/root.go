@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 NAME HERE <EMAIL ADDRESS>
+Copyright © 2020 Jake Romer <mail@jakeromer.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	dispatch "github.com/jmromer/dispatch/src"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -29,10 +27,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "dispatch",
-	Short: "Fuzzy-find a project directory",
-	Long:  `Fuzzy-find a project directory`,
-	Run:   dispatch.Dispatch,
+	Use:   "pd",
+	Short: "TODO: Add description",
+	Long:  `TODO: Add description`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -50,8 +47,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dispatch.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.pd.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -65,15 +61,10 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".dispatch" (without extension).
+		home := HomeDir()
+		// Search config in home directory with name ".pdrc" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".dispatch")
+		viper.SetConfigName(".pdrc")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
