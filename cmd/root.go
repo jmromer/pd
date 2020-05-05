@@ -24,6 +24,7 @@ import (
 )
 
 var cfgFile string
+var historyFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -31,6 +32,12 @@ var rootCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 }
+
+// select - fuzzy-select a project / directory
+// add - add project / directory to list
+// sync - re-rank projects
+// collect - find all VC projects in home directory
+// directory - abs path from log entry label
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -43,34 +50,19 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.pd.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVar(
+		&cfgFile, "config", "~/.pdrc", "config file")
+	rootCmd.PersistentFlags().StringVar(
+		&historyFile, "history", "~/.pd_history", "history file")
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home := HomeDir()
-		// Search config in home directory with name ".pdrc" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".pdrc")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
+	// Use config file from the flag.
+	viper.SetConfigFile(ExpandPath(cfgFile))
+	// read in environment variables that match
+	viper.AutomaticEnv()
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	viper.ReadInConfig()
+	historyFile = ExpandPath(historyFile)
 }

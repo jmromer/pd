@@ -20,33 +20,8 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/logrusorgru/aurora"
 	homedir "github.com/mitchellh/go-homedir"
 )
-
-type LogEntry struct {
-	projectName  string
-	location     string
-	absolutePath string
-}
-
-// ParseLogEntry parses the given absolute path `abspath`, returning an LogEntry
-// struct with `projectName`, `location`, and `absolutePath`
-func ParseLogEntry(abspath string) LogEntry {
-	homeDir := fmt.Sprintf("%s/", os.ExpandEnv("$HOME"))
-	path := strings.Replace(abspath, homeDir, "", -1)
-	components := strings.Split(path, "/")
-
-	last := len(components) - 1
-	location := strings.Join(components[0:last], "/")
-	projectName := components[last]
-
-	return LogEntry{
-		projectName:  Blue(projectName).String(),
-		location:     Gray(12-1, location).String(),
-		absolutePath: abspath,
-	}
-}
 
 // Exists returns true if the given file or directory exists, else false.
 func Exists(path string) (bool, error) {
@@ -61,10 +36,11 @@ func Exists(path string) (bool, error) {
 }
 
 // TODO: Add doc
-func PanicIfErr(e error) {
-	if e != nil {
-		panic(e)
+func ExpandPath(path string) string {
+	if strings.HasPrefix(path, "~") {
+		path = strings.Replace(path, "~", HomeDir(), 1)
 	}
+	return path
 }
 
 // TODO: Add doc
@@ -77,4 +53,11 @@ func HomeDir() string {
 	}
 
 	return home
+}
+
+// TODO: Add doc
+func PanicIfErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
