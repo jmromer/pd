@@ -18,21 +18,23 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 )
 
 // Exists returns true if the given file or directory exists, else false.
-func Exists(path string) (bool, error) {
+// TODO: concentrate error checking here
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
-		return true, nil
+		return true
 	}
 	if os.IsNotExist(err) {
-		return false, nil
+		return false
 	}
-	return true, err
+	return true
 }
 
 // TODO: Add doc
@@ -40,24 +42,22 @@ func ExpandPath(path string) string {
 	if strings.HasPrefix(path, "~") {
 		path = strings.Replace(path, "~", HomeDir(), 1)
 	}
-	return path
+	abspath, err := filepath.Abs(path)
+	check(err)
+	return abspath
 }
 
 // TODO: Add doc
 func HomeDir() string {
 	home, err := homedir.Dir()
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
+	check(err)
 	return home
 }
 
 // TODO: Add doc
-func PanicIfErr(err error) {
+func check(err error) {
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }
