@@ -74,16 +74,12 @@ func CollectProjects() {
 	check(err)
 	defer file.Close()
 
-	filepath.Walk(HomeDir(), func(path string, info os.FileInfo, err error) error {
-		return collectProjectDir(
-			path,
-			skipDirs,
-			info,
-			file,
-			err,
-		)
-	})
-
+	filepath.Walk(
+		HomeDir(),
+		func(path string, info os.FileInfo, err error) error {
+			return collectProjectDir(path, skipDirs, info, file, err)
+		},
+	)
 	file.Sync()
 }
 
@@ -124,8 +120,8 @@ func SyncProjectListing() {
 		fmt.Println("Syncing project listing...")
 	}
 
-	entryCounts := map[string]int{}
 	entryLabels := map[string]string{}
+	entryCounts := map[string]int{}
 
 	fp, err := os.Open(historyFile)
 	check(err)
@@ -134,7 +130,8 @@ func SyncProjectListing() {
 	scanner := bufio.NewScanner(fp)
 	for scanner.Scan() {
 		entry := strings.Split(scanner.Text(), ",")
-		count, _ := strconv.Atoi(entry[0])
+		count := 0
+		count, _ = strconv.Atoi(entry[0])
 		abspath := entry[1]
 		label := entry[2]
 
@@ -145,16 +142,15 @@ func SyncProjectListing() {
 	}
 
 	// aggregate log entries, sorting by count in desc order
-	entries := []LogEntry{}
-	for abspath, count := range entryCounts {
-		entries = append(entries, LogEntry{
-			Count:        count,
-			AbsolutePath: abspath,
-			Label:        entryLabels[abspath],
-		})
+	i := 0
+	entries := make([]LogEntry, len(entryCounts))
+	for path, ct := range entryCounts {
+		entries[i] = LogEntry{Count: ct, AbsolutePath: path, Label: entryLabels[path]}
+		i += 1
 	}
 	sort.Sort(ByCount(entries))
 
+	// write sorted entries to log
 	f, err := os.Create(ExpandPath(historyFile))
 	check(err)
 	defer f.Close()
@@ -220,7 +216,7 @@ func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, 
 	return nil
 }
 
-// streams history file contents
+// stream history file contents
 func historyFileSource() source.Source {
 	return func(out io.WriteCloser) error {
 		fp, err := os.Open(historyFile)
