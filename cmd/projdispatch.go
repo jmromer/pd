@@ -46,10 +46,6 @@ func AddLogEntry(abspath string) {
 
 // TODO: Add doc
 func ChangeDirectory(path string) string {
-	if len(path) == 0 || path == "~" {
-		return HomeDir()
-	}
-
 	// resolve symlinks in case path contains one
 	target, err := filepath.EvalSymlinks(ExpandPath(path))
 	check(err)
@@ -93,7 +89,7 @@ func SelectProject() {
 		"--cycle",
 		"--no-multi",
 		"--no-sort",
-		"--preview='cd-dispatch-fzf-preview {+}'",
+		"--preview='pd preview {+}'",
 		"--reverse",
 		"--tiebreak=index",
 	)
@@ -233,21 +229,21 @@ func historyFileSource() source.Source {
 }
 
 // TODO: Add doc
-func projectLabelToAbsPath(selection string) string {
-	comps := strings.Fields(selection)
+func projectLabelToAbsPath(label string) string {
+	comps := strings.Split(label, " ")
 	proj := comps[0]
 	abspath := HomeDir()
 
 	if len(comps) > 1 {
-		path := comps[1]
+		path := strings.Join(comps[1:], " ")
 		if strings.HasPrefix(path, "/") {
 			abspath = path
 		} else {
-			abspath = strings.Join([]string{abspath, path}, "/")
+			abspath = filepath.Join(abspath, path)
 		}
 	}
 
-	return strings.Join([]string{abspath, proj}, "/")
+	return filepath.Join(abspath, proj)
 }
 
 // TODO: Add doc
@@ -261,4 +257,26 @@ func writeLogEntry(entry LogEntry, file *os.File) {
 	)
 	_, err := file.WriteString(line)
 	check(err)
+}
+
+// TODO: Add doc
+func listProjectFiles(label string) {
+	path := projectLabelToAbsPath(label)
+	abbreviated := strings.Replace(path, HomeDir(), "~", 1)
+	fmt.Println(abbreviated)
+
+	list, err := ListFilesExa(path)
+	if err != nil {
+		list, err = ListFilesLs(path)
+	}
+
+	if err == nil && len(list) > 0 {
+		fmt.Println(list)
+	} else if len(list) == 0 {
+		fmt.Println("Empty.")
+	} else if !Exists(path) {
+		fmt.Println("Directory does not exist.")
+	} else {
+		fmt.Println("Could not list contents.")
+	}
 }

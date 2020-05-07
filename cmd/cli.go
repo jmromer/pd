@@ -25,13 +25,11 @@ import (
 
 // TODO;
 // evacuation strategy (from original)
-// internalize preview logic
-// documentation
 // function name capitalization conventions
 // skip patterns
+// documentation
 // profile & optimize
-// customize fzf command
-// skip -3 args?
+// skip -n args?
 
 var cfgFile string
 var historyFile string
@@ -83,6 +81,15 @@ var collectCmd = &cobra.Command{
 	},
 }
 
+var previewCmd = &cobra.Command{
+	Use:   "preview",
+	Short: "TODO: Add description",
+	Long:  `TODO: Add description`,
+	Run: func(cmd *cobra.Command, args []string) {
+		listProjectFiles(strings.Join(args, " "))
+	},
+}
+
 var selectCmd = &cobra.Command{
 	Use:   "select",
 	Short: "TODO: Add description",
@@ -121,6 +128,7 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(cdCmd)
 	rootCmd.AddCommand(collectCmd)
+	rootCmd.AddCommand(previewCmd)
 	rootCmd.AddCommand(selectCmd)
 	rootCmd.AddCommand(syncCmd)
 }

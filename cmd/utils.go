@@ -16,8 +16,10 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -28,22 +30,41 @@ import (
 // TODO: concentrate error checking here
 func Exists(path string) bool {
 	_, err := os.Stat(path)
+
 	if err == nil {
 		return true
 	}
+
 	if os.IsNotExist(err) {
 		return false
 	}
+
 	return true
 }
 
 // TODO: Add doc
 func ExpandPath(path string) string {
+	if len(path) == 0 {
+		return HomeDir()
+	}
+
+	// resolve to lexical file path
+	path = filepath.Clean(path)
+	if path == "." {
+		pwd, err := os.Getwd()
+		check(err)
+		return pwd
+	}
+
+	// expand home directory if a tilde is passed
 	if strings.HasPrefix(path, "~") {
 		path = strings.Replace(path, "~", HomeDir(), 1)
 	}
+
+	// expand to absolute path
 	abspath, err := filepath.Abs(path)
 	check(err)
+
 	return abspath
 }
 
@@ -60,4 +81,55 @@ func check(err error) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+// list contents of `path` using exa
+func ListFilesExa(path string) (string, error) {
+	var out bytes.Buffer
+	var output string
+
+	cmd := exec.Command(
+		"exa",
+		"--all",
+		"--color=always",
+		"--git",
+		"--group-directories-first",
+		"--header",
+		"--long",
+		path,
+	)
+
+	cmd.Stdout = &out
+	err := cmd.Run()
+
+	if err == nil {
+		output = out.String()
+	}
+
+	return output, err
+}
+
+// list contents of `path` using ls
+func ListFilesLs(path string) (string, error) {
+	var out bytes.Buffer
+	var output string
+
+	cmd := exec.Command(
+		"ls",
+		"--almost-all",
+		"--color=always",
+		"--group-directories-first",
+		"--human-readable",
+		"-l",
+		path,
+	)
+
+	cmd.Stdout = &out
+	err := cmd.Run()
+
+	if err == nil {
+		output = out.String()
+	}
+
+	return output, err
 }
