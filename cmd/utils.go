@@ -28,7 +28,7 @@ import (
 
 // Exists returns true if the given file or directory exists, else false.
 // TODO: concentrate error checking here
-func Exists(path string) bool {
+func exists(path string) bool {
 	_, err := os.Stat(path)
 
 	if err == nil {
@@ -43,9 +43,9 @@ func Exists(path string) bool {
 }
 
 // TODO: Add doc
-func ExpandPath(path string) string {
+func expandPath(path string) string {
 	if len(path) == 0 {
-		return HomeDir()
+		return homeDir()
 	}
 
 	// resolve to lexical file path
@@ -58,7 +58,7 @@ func ExpandPath(path string) string {
 
 	// expand home directory if a tilde is passed
 	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", HomeDir(), 1)
+		path = strings.Replace(path, "~", homeDir(), 1)
 	}
 
 	// expand to absolute path
@@ -69,7 +69,7 @@ func ExpandPath(path string) string {
 }
 
 // TODO: Add doc
-func HomeDir() string {
+func homeDir() string {
 	home, err := homedir.Dir()
 	check(err)
 	return home
@@ -84,7 +84,7 @@ func check(err error) {
 }
 
 // list contents of `path` using exa
-func ListFilesExa(path string) (string, error) {
+func listFilesExa(path string) (string, error) {
 	var out bytes.Buffer
 	var output string
 
@@ -110,7 +110,7 @@ func ListFilesExa(path string) (string, error) {
 }
 
 // list contents of `path` using ls
-func ListFilesLs(path string) (string, error) {
+func listFilesLs(path string) (string, error) {
 	var out bytes.Buffer
 	var output string
 

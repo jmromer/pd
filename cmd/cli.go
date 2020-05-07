@@ -25,7 +25,6 @@ import (
 
 // TODO;
 // evacuation strategy (from original)
-// function name capitalization conventions
 // skip patterns
 // documentation
 // profile & optimize
@@ -40,7 +39,7 @@ var rootCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 	Run: func(cmd *cobra.Command, args []string) {
-		SelectProject()
+		selectProject()
 	},
 }
 
@@ -52,7 +51,7 @@ var addCmd = &cobra.Command{
 		if len(args) == 0 {
 			return
 		}
-		AddLogEntry(args[0])
+		addLogEntry(args[0])
 	},
 }
 
@@ -66,8 +65,8 @@ var cdCmd = &cobra.Command{
 			fmt.Println(path)
 			return
 		} else {
-			fmt.Println(ChangeDirectory(path))
-			SyncProjectListing()
+			fmt.Println(changeDirectory(path))
+			syncProjectListing()
 		}
 	},
 }
@@ -77,7 +76,7 @@ var collectCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 	Run: func(cmd *cobra.Command, args []string) {
-		CollectProjects()
+		collectProjects()
 	},
 }
 
@@ -95,7 +94,7 @@ var selectCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 	Run: func(cmd *cobra.Command, args []string) {
-		SelectProject()
+		selectProject()
 	},
 }
 
@@ -104,7 +103,7 @@ var syncCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 	Run: func(cmd *cobra.Command, args []string) {
-		SyncProjectListing()
+		syncProjectListing()
 	},
 }
 
@@ -136,10 +135,10 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	// Use config file from the flag.
-	viper.SetConfigFile(ExpandPath(cfgFile))
+	viper.SetConfigFile(expandPath(cfgFile))
 	// read in environment variables that match
 	viper.AutomaticEnv()
 	// If a config file is found, read it in.
 	viper.ReadInConfig()
-	historyFile = ExpandPath(historyFile)
+	historyFile = expandPath(historyFile)
 }

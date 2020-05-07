@@ -33,9 +33,9 @@ import (
 
 // TODO: Add doc
 // append to log file
-func AddLogEntry(abspath string) {
+func addLogEntry(abspath string) {
 	f, err := os.OpenFile(
-		ExpandPath(historyFile),
+		expandPath(historyFile),
 		os.O_APPEND|os.O_WRONLY,
 		0600,
 	)
@@ -45,9 +45,9 @@ func AddLogEntry(abspath string) {
 }
 
 // TODO: Add doc
-func ChangeDirectory(path string) string {
+func changeDirectory(path string) string {
 	// resolve symlinks in case path contains one
-	target, err := filepath.EvalSymlinks(ExpandPath(path))
+	target, err := filepath.EvalSymlinks(expandPath(path))
 	check(err)
 
 	// use the containing directory if `path` is a file
@@ -55,12 +55,12 @@ func ChangeDirectory(path string) string {
 		target = filepath.Dir(target)
 	}
 
-	AddLogEntry(target)
+	addLogEntry(target)
 	return target
 }
 
 // TODO: Add doc
-func CollectProjects() {
+func collectProjects() {
 	fmt.Println("Finding project directories...")
 	skipDirs := map[string]bool{
 		os.ExpandEnv("$HOME/Library"): true,
@@ -71,7 +71,7 @@ func CollectProjects() {
 	defer file.Close()
 
 	filepath.Walk(
-		HomeDir(),
+		homeDir(),
 		func(path string, info os.FileInfo, err error) error {
 			return collectProjectDir(path, skipDirs, info, file, err)
 		},
@@ -80,7 +80,7 @@ func CollectProjects() {
 }
 
 // TODO: Add doc
-func SelectProject() {
+func selectProject() {
 	fzf, err := finder.New(
 		"fzf",
 		"--ansi",
@@ -95,8 +95,8 @@ func SelectProject() {
 	)
 	check(err)
 
-	if !Exists(historyFile) {
-		CollectProjects()
+	if !exists(historyFile) {
+		collectProjects()
 	}
 
 	fzf.Read(historyFileSource())
@@ -111,7 +111,7 @@ func SelectProject() {
 // TODO: Add doc
 // read history entries
 // re-rank them, aggregating multiple entries
-func SyncProjectListing() {
+func syncProjectListing() {
 	if verbose {
 		fmt.Println("Syncing project listing...")
 	}
@@ -131,7 +131,7 @@ func SyncProjectListing() {
 		abspath := entry[1]
 		label := entry[2]
 
-		if Exists(abspath) {
+		if exists(abspath) {
 			entryLabels[abspath] = label
 			entryCounts[abspath] += count
 		}
@@ -147,7 +147,7 @@ func SyncProjectListing() {
 	sort.Sort(ByCount(entries))
 
 	// write sorted entries to log
-	f, err := os.Create(ExpandPath(historyFile))
+	f, err := os.Create(expandPath(historyFile))
 	check(err)
 	defer f.Close()
 	for _, entry := range entries {
@@ -173,7 +173,7 @@ func (a ByCount) Less(i, j int) bool { return a[j].Count < a[i].Count }
 
 // TODO: add doc
 func buildLogEntry(abspath string) LogEntry {
-	homeDir := fmt.Sprintf("%s/", HomeDir())
+	homeDir := fmt.Sprintf("%s/", homeDir())
 	path := strings.Replace(abspath, homeDir, "", -1)
 	components := strings.Split(path, "/")
 
@@ -203,7 +203,8 @@ func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, 
 
 	// if the given directory contains a Git repo,
 	// log its path and don't recurse into it.
-	isGitProj := Exists(filepath.Join(path, ".git"))
+	// TODO: mercurial, projectile, etc
+	isGitProj := exists(filepath.Join(path, ".git"))
 	if err == nil && isGitProj {
 		writeLogEntry(buildLogEntry(path), file)
 		return filepath.SkipDir
@@ -232,7 +233,7 @@ func historyFileSource() source.Source {
 func projectLabelToAbsPath(label string) string {
 	comps := strings.Split(label, " ")
 	proj := comps[0]
-	abspath := HomeDir()
+	abspath := homeDir()
 
 	if len(comps) > 1 {
 		path := strings.Join(comps[1:], " ")
@@ -262,19 +263,19 @@ func writeLogEntry(entry LogEntry, file *os.File) {
 // TODO: Add doc
 func listProjectFiles(label string) {
 	path := projectLabelToAbsPath(label)
-	abbreviated := strings.Replace(path, HomeDir(), "~", 1)
+	abbreviated := strings.Replace(path, homeDir(), "~", 1)
 	fmt.Println(abbreviated)
 
-	list, err := ListFilesExa(path)
+	list, err := listFilesExa(path)
 	if err != nil {
-		list, err = ListFilesLs(path)
+		list, err = listFilesLs(path)
 	}
 
 	if err == nil && len(list) > 0 {
 		fmt.Println(list)
 	} else if len(list) == 0 {
 		fmt.Println("Empty.")
-	} else if !Exists(path) {
+	} else if !exists(path) {
 		fmt.Println("Directory does not exist.")
 	} else {
 		fmt.Println("Could not list contents.")
