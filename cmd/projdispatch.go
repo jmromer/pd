@@ -201,11 +201,9 @@ func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, 
 		return filepath.SkipDir
 	}
 
-	// if the given directory contains a Git repo,
+	// if the given directory is a project,
 	// log its path and don't recurse into it.
-	// TODO: mercurial, projectile, etc
-	isGitProj := exists(filepath.Join(path, ".git"))
-	if err == nil && isGitProj {
+	if err == nil && isProject(path) {
 		writeLogEntry(buildLogEntry(path), file)
 		return filepath.SkipDir
 	}

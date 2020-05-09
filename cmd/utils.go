@@ -75,6 +75,18 @@ func homeDir() string {
 	return home
 }
 
+func isProject(path string) bool {
+	return isGitProject(path) || isProjectile(path)
+}
+
+func isGitProject(path string) bool {
+	return exists(filepath.Join(path, ".git"))
+}
+
+func isProjectile(path string) bool {
+	return exists(filepath.Join(path, ".projectile"))
+}
+
 // TODO: Add doc
 func check(err error) {
 	if err != nil {
