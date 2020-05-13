@@ -59,7 +59,7 @@ func findDirectory(path string) string {
 // Scan the current user's home directory for projects
 // "Projects" being directories under version control or with .projectile file.
 func collectProjects() {
-	if verbose {
+	if debug {
 		// TODO: Add status indicator (progress counter?)
 		fmt.Println("Finding project directories...")
 	}
@@ -92,7 +92,7 @@ func selectProject() {
 		"--cycle",
 		"--no-multi",
 		"--no-sort",
-		"--preview='pd preview {+}'",
+		"--preview='pd --pd-preview={+}'",
 		"--reverse",
 		"--tiebreak=index",
 	)
@@ -113,10 +113,9 @@ func selectProject() {
 
 // Refresh the pd history file
 // Re-aggregate and re-rank entries, remove directories that no longer exist.
-func syncProjectListing() {
-	if verbose {
-		// TODO: Add status indicator (progress counter?)
-		fmt.Println("Syncing project listing...")
+func refreshProjectListing() {
+	if debug {
+		fmt.Println("Refreshing project listing...")
 	}
 
 	entryLabels := map[string]string{}
@@ -157,8 +156,8 @@ func syncProjectListing() {
 		writeLogEntry(entry, f)
 	}
 
-	if verbose {
-		fmt.Println("Synced at", time.Now().Format("Mon Jan 2 15:04:05 MST 2006"))
+	if debug {
+		fmt.Println("Completed at", time.Now().Format("Mon Jan 2 15:04:05 MST 2006"))
 	}
 }
 

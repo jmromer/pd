@@ -26,88 +26,96 @@ import (
 // TODO:
 // eliminate lossy path / label parsing
 // implement skip patterns
-// evacuation strategy
+// expiration strategy
 // profile & optimize
 // skip -n args possible?
 
 var cfgFile string
 var historyFile string
-var verbose bool
+var debug bool
 
 var rootCmd = &cobra.Command{
 	Use:   "pd",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		selectProject()
-	},
-}
+	Short: "A project / directory manager and fuzzy-selector.",
+	Long: `
+p/d
 
-var addCmd = &cobra.Command{
-	Use:   "add",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
+Intended to be used in tandem with cd as follows:
+
+  cd $(pd [directory-name])
+
+Given a file path, print its absolute form (resolving symlinks) and save to
+history. If a path to a non-directory is given, use its containing
+directory instead.
+
+Examples:
+
+  pd ~/Documents/projects/my-project
+  pd ~/my-other-project
+  pd ./projects/my-project/some-file.txt
+
+Given a position on the directory stack, no-op. Print that back out to leave the
+behavior of cd unchanged.
+
+Examples:
+  pd -2
+  pd +1
+
+Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
+		target := strings.Trim(strings.Join(args, " "), " ")
+		if len(target) == 0 {
+			selectProject()
 			return
 		}
-		addLogEntry(args[0])
-	},
-}
 
-var cdCmd = &cobra.Command{
-	Use:   "cd",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		path := strings.Trim(strings.Join(args, " "), " ")
-		if strings.HasPrefix(path, "-") {
-			fmt.Println(path)
+		// Given a project label, generate a preview (file listing) of its contents.
+		// Examples:
+		// pd --pd-preview=my-project Documents/projects
+		// pd --pd-preview=my-other-project
+		if strings.HasPrefix(target, "--pd-preview=") {
+			label := strings.Replace(target, "--pd-preview=", "", 1)
+			listProjectFiles(label)
 			return
-		} else {
-			dir := findDirectory(path)
-			addLogEntry(dir)
-			fmt.Println(dir)
-			syncProjectListing()
 		}
+
+		// Find all version-controlled projects $HOME and refresh the history.
+		// 	Refreshing the history removes any directories that no longer exist,
+		// 	and re-aggregates and re-ranks entries.
+		if target == "--pd-refresh" {
+			collectProjects()
+			refreshProjectListing()
+			return
+		}
+
+		if strings.HasPrefix(target, "-") ||
+			strings.HasPrefix(target, "+") {
+			fmt.Println(target)
+			return
+		}
+
+		dir := findDirectory(target)
+		addLogEntry(dir)
+		fmt.Println(dir)
+
+		refreshProjectListing()
 	},
+	DisableFlagParsing: true,
+	SilenceErrors:      true,
+	SilenceUsage:       true,
 }
 
-var collectCmd = &cobra.Command{
-	Use:   "collect",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		collectProjects()
-	},
-}
+var usageTemplate = `Usage:{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}{{if .HasAvailableSubCommands}}
 
-var previewCmd = &cobra.Command{
-	Use:   "preview",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		listProjectFiles(strings.Join(args, " "))
-	},
-}
+Available Subcommands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+`
 
-var selectCmd = &cobra.Command{
-	Use:   "select",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		selectProject()
-	},
-}
-
-var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "TODO: Add description",
-	Long:  `TODO: Add description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		verbose = true
-		syncProjectListing()
-	},
+func init() {
+	cobra.OnInitialize(initConfig)
+	rootCmd.SetUsageTemplate(usageTemplate)
 }
 
 // Execute adds all child commands to the root command and sets flags
@@ -118,30 +126,11 @@ func Execute() {
 	check(err)
 }
 
-func init() {
-	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(
-		&cfgFile, "config", "c", "~/.pdrc", "config file")
-	rootCmd.PersistentFlags().StringVarP(
-		&historyFile, "file", "f", "~/.pd_history", "history file")
-	rootCmd.PersistentFlags().BoolVarP(
-		&verbose, "verbose", "v", false, "verbose output")
-
-	rootCmd.AddCommand(addCmd)
-	rootCmd.AddCommand(cdCmd)
-	rootCmd.AddCommand(collectCmd)
-	rootCmd.AddCommand(previewCmd)
-	rootCmd.AddCommand(selectCmd)
-	rootCmd.AddCommand(syncCmd)
-}
-
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// Use config file from the flag.
-	viper.SetConfigFile(expandPath(cfgFile))
-	// read in environment variables that match
-	viper.AutomaticEnv()
-	// If a config file is found, read it in.
+	viper.AddConfigPath(homeDir())
+	viper.SetConfigName(".pdrc")
 	viper.ReadInConfig()
-	historyFile = expandPath(historyFile)
+
+	historyFile = expandPath("~/.pd_history")
 }

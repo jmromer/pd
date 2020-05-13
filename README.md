@@ -1,5 +1,5 @@
-pd
-==
+p/d
+===
 
 Fast, fuzzy switching between version-controlled projects and directories on the
 command line.
@@ -18,17 +18,8 @@ Recommended setup
 # 3. log a directory visit when given any other arg
 cd() {
     local target
-
-    if [[ "$1" =~ ^[-+][0-9]+ ]]; then
-        target="$1"
-    elif [[ -z "$1" ]]; then
-        target="$(pd)"
-    else
-        target="$(pd cd "$1")"
-    fi
-
-    [[ -z "$target" ]] && return
-    builtin cd "$target" || return
+    target="$(pd "$1")"
+    [[ -n "$target" ]] && builtin cd "$target" || return
 }
 
 # ctrl-o to change directories with pd
