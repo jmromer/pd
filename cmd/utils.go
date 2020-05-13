@@ -95,12 +95,9 @@ func check(err error) {
 	}
 }
 
-// list contents of `path` using exa
+// List the contents of `path` using exa.
 func listFilesExa(path string, abbreviated string) (string, error) {
-	var out bytes.Buffer
-	var output string
 	fmt.Println(abbreviated)
-
 	cmd := exec.Command(
 		"exa",
 		"--all",
@@ -111,23 +108,12 @@ func listFilesExa(path string, abbreviated string) (string, error) {
 		"--long",
 		path,
 	)
-
-	cmd.Stdout = &out
-	err := cmd.Run()
-
-	if err == nil {
-		output = out.String()
-	}
-
-	return output, err
+	return capturedOutput(cmd)
 }
 
-// list contents of `path` using ls
+// List the contents of `path` using ls.
 func listFilesLs(path string, abbreviated string) (string, error) {
-	var out bytes.Buffer
-	var output string
 	fmt.Println(abbreviated)
-
 	cmd := exec.Command(
 		"ls",
 		"--almost-all",
@@ -137,21 +123,11 @@ func listFilesLs(path string, abbreviated string) (string, error) {
 		"-l",
 		path,
 	)
-
-	cmd.Stdout = &out
-	err := cmd.Run()
-
-	if err == nil {
-		output = out.String()
-	}
-
-	return output, err
+	return capturedOutput(cmd)
 }
 
+// List the contents of `path` using tree.
 func listFilesTree(path string) (string, error) {
-	var out bytes.Buffer
-	var output string
-
 	cmd := exec.Command(
 		"tree",
 		"-C",
@@ -159,6 +135,13 @@ func listFilesTree(path string) (string, error) {
 		"2",
 		path,
 	)
+	return capturedOutput(cmd)
+}
+
+// Capture the output of command `cmd`, returning a string.
+func capturedOutput(cmd *exec.Cmd) (string, error) {
+	var out bytes.Buffer
+	var output string
 
 	cmd.Stdout = &out
 	err := cmd.Run()
