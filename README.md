@@ -1,7 +1,8 @@
 pd
 ==
 
-Fast, fuzzy switching between projects on the command line.
+Fast, fuzzy switching between version-controlled projects and directories on the
+command line.
 
 [![asciicast][ascii-svg]][ascii]
 
@@ -11,10 +12,10 @@ Recommended setup
 ```sh
 # ~/.zshrc
 
-# override built-in cd to:
-# 1. fuzzy-select a directory to visit (when given no args)
-# 2. retain built-in dir-stack-related behavior (when given a leading -/+ numeric arg)
-# 3. log a directory visit (when given any other arg)
+# wrap built-in cd to:
+# 1. fuzzy-select a directory to visit when given no arg
+# 2. retain built-in dir-stack-related behavior when given a leading -/+ numeric arg
+# 3. log a directory visit when given any other arg
 cd() {
     local target
     case "$1" in
