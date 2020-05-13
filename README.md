@@ -18,17 +18,14 @@ Recommended setup
 # 3. log a directory visit when given any other arg
 cd() {
     local target
-    case "$1" in
-        "")
-            target="$(pd)"
-            ;;
-        ^[-+][0-9]+$)
-            target="$1"
-            ;;
-        *)
-            target="$(pd cd "$1")"
-            ;;
-    esac
+
+    if [[ "$1" =~ ^[-+][0-9]+ ]]; then
+        target="$1"
+    elif [[ -z "$1" ]]; then
+        target="$(pd)"
+    else
+        target="$(pd cd "$1")"
+    fi
 
     [[ -z "$target" ]] && return
     builtin cd "$target" || return
