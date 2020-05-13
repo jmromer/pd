@@ -61,7 +61,9 @@ func changeDirectory(path string) string {
 
 // TODO: Add doc
 func collectProjects() {
-	fmt.Println("Finding project directories...")
+	if verbose {
+		fmt.Println("Finding project directories...")
+	}
 	skipDirs := map[string]bool{
 		os.ExpandEnv("$HOME/Library"): true,
 	}

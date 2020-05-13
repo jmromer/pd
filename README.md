@@ -17,7 +17,7 @@ Recommended setup
 # 3. log a directory visit (when given any other arg)
 cd() {
     local target
-    case "$*" in
+    case "$1" in
         "")
             target="$(pd)"
             ;;
@@ -28,6 +28,8 @@ cd() {
             target="$(pd cd "$1")"
             ;;
     esac
+
+    [[ -z "$target" ]] && return
     builtin cd "$target" || return
 }
 

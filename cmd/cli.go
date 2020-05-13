@@ -103,6 +103,7 @@ var syncCmd = &cobra.Command{
 	Short: "TODO: Add description",
 	Long:  `TODO: Add description`,
 	Run: func(cmd *cobra.Command, args []string) {
+		verbose = true
 		syncProjectListing()
 	},
 }
