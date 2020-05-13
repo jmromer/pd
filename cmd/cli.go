@@ -23,12 +23,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-// TODO;
-// evacuation strategy (from original)
-// skip patterns
-// documentation
+// TODO:
+// eliminate lossy path / label parsing
+// implement skip patterns
+// evacuation strategy
 // profile & optimize
-// skip -n args?
+// skip -n args possible?
 
 var cfgFile string
 var historyFile string
