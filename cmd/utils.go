@@ -145,3 +145,25 @@ func listFilesLs(path string) (string, error) {
 
 	return output, err
 }
+
+func listFilesTree(path string) (string, error) {
+	var out bytes.Buffer
+	var output string
+
+	cmd := exec.Command(
+		"tree",
+		"-C",
+		"-L",
+		"2",
+		path,
+	)
+
+	cmd.Stdout = &out
+	err := cmd.Run()
+
+	if err == nil {
+		output = out.String()
+	}
+
+	return output, err
+}
