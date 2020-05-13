@@ -31,8 +31,7 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-// TODO: Add doc
-// append to log file
+// Append a log entry for the the given absolute path to the pd history file
 func addLogEntry(abspath string) {
 	f, err := os.OpenFile(
 		expandPath(historyFile),
@@ -44,27 +43,28 @@ func addLogEntry(abspath string) {
 	writeLogEntry(buildLogEntry(abspath), f)
 }
 
-// TODO: Add doc
-func changeDirectory(path string) string {
-	// resolve symlinks in case path contains one
-	target, err := filepath.EvalSymlinks(expandPath(path))
-	check(err)
+// Resolve the given path to an absolute path to a directory.
+// If given a path to a file, return the containing directory.
+func findDirectory(path string) string {
+	target := expandPath(path)
 
 	// use the containing directory if `path` is a file
 	if stat, err := os.Stat(target); err == nil && !stat.IsDir() {
 		target = filepath.Dir(target)
 	}
 
-	addLogEntry(target)
 	return target
 }
 
-// TODO: Add doc
+// Scan the current user's home directory for projects
+// "Projects" being directories under version control or with .projectile file.
 func collectProjects() {
 	if verbose {
+		// TODO: Add status indicator (progress counter?)
 		fmt.Println("Finding project directories...")
 	}
 	skipDirs := map[string]bool{
+		// TODO: Add config knob for this
 		os.ExpandEnv("$HOME/Library"): true,
 	}
 
@@ -81,7 +81,8 @@ func collectProjects() {
 	file.Sync()
 }
 
-// TODO: Add doc
+// Use FZF to select a project directory, printing to stdout the absolute path
+// to the project directory.
 func selectProject() {
 	fzf, err := finder.New(
 		"fzf",
@@ -110,11 +111,11 @@ func selectProject() {
 	}
 }
 
-// TODO: Add doc
-// read history entries
-// re-rank them, aggregating multiple entries
+// Refresh the pd history file
+// Re-aggregate and re-rank entries, remove directories that no longer exist.
 func syncProjectListing() {
 	if verbose {
+		// TODO: Add status indicator (progress counter?)
 		fmt.Println("Syncing project listing...")
 	}
 
@@ -161,6 +162,8 @@ func syncProjectListing() {
 	}
 }
 
+// Each entry in the pd history file consists of a count, an abs path, and the
+// colored project label to be used in the FZF interface.
 type LogEntry struct {
 	Count        int
 	AbsolutePath string
@@ -173,7 +176,7 @@ func (a ByCount) Len() int           { return len(a) }
 func (a ByCount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByCount) Less(i, j int) bool { return a[j].Count < a[i].Count }
 
-// TODO: add doc
+// Given an absolute path, parse out a project label and return a new LogEntry.
 func buildLogEntry(abspath string) LogEntry {
 	homeDir := fmt.Sprintf("%s/", homeDir())
 	path := strings.Replace(abspath, homeDir, "", -1)
@@ -190,7 +193,15 @@ func buildLogEntry(abspath string) LogEntry {
 	return LogEntry{Count: 1, AbsolutePath: abspath, Label: label}
 }
 
-// TODO: add doc
+// Logic invoked when walking the file tree in `collectProjects`.
+// For a given file path, skip to the next iteration if:
+//
+// 1. The file isn't a directory
+// 2. The directory begins with a `.`
+// 3. The directory is in the given skip list
+//
+// Otherwise, log the directory and skip to the next iteration without recursing
+// into the directory (nested projects won't be logged unless manually visited).
 func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, file *os.File, err error) error {
 	// If the given file isn't a directory, we can skip it
 	if err != nil || !info.IsDir() {
@@ -213,7 +224,7 @@ func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, 
 	return nil
 }
 
-// stream history file contents
+// Stream the history file's contents
 func historyFileSource() source.Source {
 	return func(out io.WriteCloser) error {
 		fp, err := os.Open(historyFile)
@@ -229,7 +240,13 @@ func historyFileSource() source.Source {
 	}
 }
 
-// TODO: Add doc
+// Given a project label, re-construct the absolute path that was used to
+// generate it.
+//
+// TODO: Find a better way to do this, since it's a lossy process and leaves
+// some un-fixable corner cases. Ideally we want to display the project label
+// when fuzzy-selecting but return the associated absolute path without parsing
+// it out.
 func projectLabelToAbsPath(label string) string {
 	comps := strings.Split(label, " ")
 	proj := comps[0]
@@ -247,8 +264,9 @@ func projectLabelToAbsPath(label string) string {
 	return filepath.Join(abspath, proj)
 }
 
-// TODO: Add doc
-// history entry format: `count, abspath, history log entry`
+// Write the given LogEntry to the given file handle.
+// History entry format is CSV with
+// `count`, `absolute path`, and `project label`
 func writeLogEntry(entry LogEntry, file *os.File) {
 	line := fmt.Sprintf(
 		"%d,%s,%s\n",
@@ -260,15 +278,18 @@ func writeLogEntry(entry LogEntry, file *os.File) {
 	check(err)
 }
 
-// TODO: Add doc
+// List the files in the directory associated with the given project label.
+// Used in the FZF preview window. Attempts to do this using exa, then tree if
+// exa is unavailable or fails. Falls back to ls if both fail.
 func listProjectFiles(label string) {
 	path := projectLabelToAbsPath(label)
 	abbreviated := strings.Replace(path, homeDir(), "~", 1)
-	fmt.Println(abbreviated)
 
-	list, err := listFilesExa(path)
+	list, err := listFilesExa(path, abbreviated)
 	if err != nil {
-		list, err = listFilesLs(path)
+		list, err = listFilesTree(path)
+	} else if err != nil {
+		list, err = listFilesLs(path, abbreviated)
 	}
 
 	if err == nil && len(list) > 0 {

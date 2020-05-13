@@ -96,9 +96,10 @@ func check(err error) {
 }
 
 // list contents of `path` using exa
-func listFilesExa(path string) (string, error) {
+func listFilesExa(path string, abbreviated string) (string, error) {
 	var out bytes.Buffer
 	var output string
+	fmt.Println(abbreviated)
 
 	cmd := exec.Command(
 		"exa",
@@ -122,9 +123,10 @@ func listFilesExa(path string) (string, error) {
 }
 
 // list contents of `path` using ls
-func listFilesLs(path string) (string, error) {
+func listFilesLs(path string, abbreviated string) (string, error) {
 	var out bytes.Buffer
 	var output string
+	fmt.Println(abbreviated)
 
 	cmd := exec.Command(
 		"ls",

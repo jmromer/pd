@@ -65,7 +65,9 @@ var cdCmd = &cobra.Command{
 			fmt.Println(path)
 			return
 		} else {
-			fmt.Println(changeDirectory(path))
+			dir := findDirectory(path)
+			addLogEntry(dir)
+			fmt.Println(dir)
 			syncProjectListing()
 		}
 	},
