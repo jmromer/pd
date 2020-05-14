@@ -57,7 +57,10 @@ func SelectProject() {
 	check(err)
 
 	if len(selection) > 0 {
-		fmt.Println(projectLabelToAbsPath(selection[0]))
+		abspath := projectLabelToAbsPath(selection[0])
+		fmt.Println(abspath)
+		addLogEntry(abspath)
+		RefreshLog(false)
 	}
 }
 
@@ -212,11 +215,14 @@ func currentlyLoggedProjects() map[string]LogEntry {
 
 		entry, isAlreadyCounted := entries[abspath]
 		if isAlreadyCounted {
-			entry.Count += currCount
-		} else {
-			entry = LogEntry{Count: currCount, AbsolutePath: abspath, Label: label}
+			currCount += entry.Count
 		}
-		entries[abspath] = entry
+
+		entries[abspath] = LogEntry{
+			Count:        currCount,
+			AbsolutePath: abspath,
+			Label:        label,
+		}
 	}
 	return entries
 }
