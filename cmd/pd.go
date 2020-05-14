@@ -60,7 +60,6 @@ func findDirectory(path string) string {
 // "Projects" being directories under version control or with .projectile file.
 func collectProjects() {
 	if debug {
-		// TODO: Add status indicator (progress counter?)
 		fmt.Println("Finding project directories...")
 	}
 	skipDirs := map[string]bool{
@@ -68,6 +67,7 @@ func collectProjects() {
 		os.ExpandEnv("$HOME/Library"): true,
 	}
 
+	// TODO: Append don't overwrite, creating if necessary
 	file, err := os.Create(historyFile)
 	check(err)
 	defer file.Close()
