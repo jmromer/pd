@@ -302,7 +302,11 @@ func historyFileSource() source.Source {
 		scanner := bufio.NewScanner(fp)
 		for scanner.Scan() {
 			entry := strings.Split(scanner.Text(), ",")
-			fmt.Fprintln(out, entry[2])
+			abspath := entry[1]
+			label := entry[2]
+			if exists(abspath) {
+				fmt.Fprintln(out, label)
+			}
 		}
 		return scanner.Err()
 	}
