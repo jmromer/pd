@@ -222,11 +222,9 @@ func currentlyLoggedProjects() map[string]LogEntry {
 }
 
 func collectEntries(foundPaths []string, currEntries map[string]LogEntry) (entries []LogEntry) {
-	// Keep all current (still current) entries
-	for abspath, entry := range currEntries {
-		if exists(abspath) {
-			entries = append(entries, entry)
-		}
+	// Keep all current entries
+	for _, entry := range currEntries {
+		entries = append(entries, entry)
 	}
 	// Keep new entries
 	for _, abspath := range foundPaths {
@@ -253,7 +251,9 @@ func refreshProjectListing(entries []LogEntry) {
 	check(err)
 	defer f.Close()
 	for _, entry := range entries {
-		writeLogEntry(entry, f)
+		if exists(entry.AbsolutePath) {
+			writeLogEntry(entry, f)
+		}
 	}
 
 	if debug {
