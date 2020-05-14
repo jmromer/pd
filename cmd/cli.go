@@ -36,37 +36,16 @@ var debug bool
 
 var rootCmd = &cobra.Command{
 	Use:   "pd",
-	Short: "A project / directory manager and fuzzy-selector.",
-	Long: `
-p/d
-
-Intended to be used in tandem with cd as follows:
-
-  cd $(pd [directory-name])
-
-Given a file path, print its absolute form (resolving symlinks) and save to
-history. If a path to a non-directory is given, use its containing
-directory instead.
-
-Examples:
-
-  pd ~/Documents/projects/my-project
-  pd ~/my-other-project
-  pd ./projects/my-project/some-file.txt
-
-Given a position on the directory stack, no-op. Print that back out to leave the
-behavior of cd unchanged.
-
-Examples:
-  pd -2
-  pd +1
-
-Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
-`,
+	Short: "A project / directory manager and FZF-powered fuzzy-selector.",
 	Run: func(cmd *cobra.Command, args []string) {
 		target := strings.Trim(strings.Join(args, " "), " ")
 		if len(target) == 0 {
 			selectProject()
+			return
+		}
+
+		if target == "--help" {
+			fmt.Println(help)
 			return
 		}
 
@@ -106,16 +85,39 @@ Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 	SilenceUsage:       true,
 }
 
-var usageTemplate = `Usage:{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]{{end}}{{if .HasAvailableSubCommands}}
+var help = `
+p/d
 
-Available Subcommands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+Usage:
+
+  pd [directory name]
+
+Intended to be used in tandem with cd as follows:
+
+  cd $(pd ~/Documents)
+
+Given a file path, print its absolute form (resolving symlinks) and save to
+history. If a path to a non-directory is given, use its containing
+directory instead.
+
+Examples:
+
+  pd ~/Documents/projects/my-project
+  pd ~/my-other-project
+  pd ./projects/my-project/some-file.txt
+
+Given a position on the directory stack, no-op. Print that back out to leave the
+behavior of cd unchanged.
+
+Examples:
+  pd -2
+  pd +1
+
+Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 `
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.SetUsageTemplate(usageTemplate)
 }
 
 // Execute adds all child commands to the root command and sets flags

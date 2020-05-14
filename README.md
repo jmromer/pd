@@ -1,8 +1,7 @@
 p/d
 ===
 
-Fast, fuzzy switching between version-controlled projects and directories on the
-command line.
+A project / directory manager and FZF-powered fuzzy-selector.
 
 [![asciicast][ascii-svg]][ascii]
 
