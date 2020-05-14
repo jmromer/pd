@@ -111,8 +111,8 @@ func RefreshLog() {
 func ChangeDirectory(target string) {
 	projectPath := findDirectory(target)
 	fmt.Println(projectPath)
-	entry := buildLogEntry(projectPath)
-	refreshProjectListing([]LogEntry{entry})
+	addLogEntry(projectPath)
+	RefreshLog()
 }
 
 // Append a log entry for the the given absolute path to the pd history file
