@@ -15,10 +15,9 @@ Recommended setup
 # 1. fuzzy-select a directory to visit when given no arg
 # 2. retain built-in dir-stack-related behavior when given a leading -/+ numeric arg
 # 3. log a directory visit when given any other arg
+
 cd() {
-    local target
-    target="$(pd "$1")"
-    [[ -n "$target" ]] && builtin cd "$target" || return
+    builtin cd "$(pd "$1")" || return
 }
 
 # ctrl-o to change directories with pd

@@ -28,7 +28,6 @@ import (
 // implement skip patterns
 // expiration strategy
 // profile & optimize
-// skip -n args possible?
 
 var cfgFile string
 var historyFile string
