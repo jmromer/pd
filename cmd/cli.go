@@ -17,72 +17,12 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-// TODO:
-// eliminate lossy path / label parsing
-// implement skip patterns
-// expiration strategy
-// profile & optimize
-
-var cfgFile string
-var historyFile string
-var debug bool
-
-var rootCmd = &cobra.Command{
-	Use:   "pd",
-	Short: "A project / directory manager and FZF-powered fuzzy-selector.",
-	Run: func(cmd *cobra.Command, args []string) {
-		target := strings.Trim(strings.Join(args, " "), " ")
-		if len(target) == 0 {
-			selectProject()
-			return
-		}
-
-		if target == "--help" {
-			fmt.Println(help)
-			return
-		}
-
-		// Given a project label, generate a preview (file listing) of its contents.
-		// Examples:
-		// pd --pd-preview=my-project Documents/projects
-		// pd --pd-preview=my-other-project
-		if strings.HasPrefix(target, "--pd-preview=") {
-			label := strings.Replace(target, "--pd-preview=", "", 1)
-			listProjectFiles(label)
-			return
-		}
-
-		// Find all version-controlled projects $HOME and refresh the history.
-		// 	Refreshing the history removes any directories that no longer exist,
-		// 	and re-aggregates and re-ranks entries.
-		if target == "--pd-refresh" {
-			collectProjects()
-			refreshProjectListing()
-			return
-		}
-
-		if strings.HasPrefix(target, "-") ||
-			strings.HasPrefix(target, "+") {
-			fmt.Println(target)
-			return
-		}
-
-		dir := findDirectory(target)
-		addLogEntry(dir)
-		fmt.Println(dir)
-
-		refreshProjectListing()
-	},
-	DisableFlagParsing: true,
-	SilenceErrors:      true,
-	SilenceUsage:       true,
-}
 
 var help = `
 p/d
@@ -114,6 +54,67 @@ Examples:
 
 Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 `
+
+// WIP:
+// implement skip patterns
+// eliminate lossy path / label parsing
+// expiration strategy
+// profile & optimize
+
+var cfgFile string
+var historyFile string
+var debug bool
+
+var rootCmd = &cobra.Command{
+	Use:   "pd",
+	Short: "A project / directory manager and FZF-powered fuzzy-selector.",
+	Run: func(cmd *cobra.Command, args []string) {
+		target := strings.Trim(strings.Join(args, " "), " ")
+		if len(target) == 0 {
+			selectProject()
+			return
+		}
+
+		if target == "--help" {
+			fmt.Println(help)
+			return
+		}
+
+		// Given a project label, generate a preview (file listing) of its contents.
+		// Examples:
+		// pd --fzf-preview my-project Documents/projects
+		// pd --fzf-preview my-other-project
+		if strings.HasPrefix(target, "--fzf-preview") {
+			label := strings.Replace(target, "--fzf-preview", "", 1)
+			listProjectFiles(label)
+			return
+		}
+
+		// Find all version-controlled projects $HOME and refresh the history.
+		// Refreshing the history removes any directories that no longer exist,
+		// and re-aggregates and re-ranks entries.
+		if target == "--pd-refresh" {
+			collectProjects()
+			refreshProjectListing()
+			return
+		}
+
+		dirStackFlag := regexp.MustCompile("\\A[-+][0-9]+\\z")
+		if dirStackFlag.MatchString(target) {
+			fmt.Println(target)
+			return
+		}
+
+		dir := findDirectory(target)
+		addLogEntry(dir)
+		fmt.Println(dir)
+
+		refreshProjectListing()
+	},
+	DisableFlagParsing: true,
+	SilenceErrors:      true,
+	SilenceUsage:       true,
+}
 
 func init() {
 	cobra.OnInitialize(initConfig)

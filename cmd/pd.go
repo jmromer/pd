@@ -92,7 +92,7 @@ func selectProject() {
 		"--cycle",
 		"--no-multi",
 		"--no-sort",
-		"--preview='pd --pd-preview={+}'",
+		"--preview='pd --fzf-preview {+}'",
 		"--reverse",
 		"--tiebreak=index",
 	)
