@@ -49,7 +49,7 @@ func SelectProject() {
 	check(err)
 
 	if !exists(historyFile) {
-		RefreshLog()
+		RefreshLog(true)
 	}
 
 	fzf.Read(historyFileSource())
@@ -96,9 +96,12 @@ func FzfPreview(label string) {
 // RefreshLog finds all version-controlled projects $HOME and refresh the
 // history. Refreshing the history removes any directories that no longer exist,
 // and re-aggregates and re-ranks entries.
-func RefreshLog() {
-	// scan home directory for all projects
-	projects := collectUserProjects()
+func RefreshLog(searchForProjects bool) {
+	projects := []string{}
+	if searchForProjects {
+		// scan home directory for all projects
+		projects = collectUserProjects()
+	}
 	// retrieve current log entries
 	logEntries := currentlyLoggedProjects()
 	// keep only those found projects not currently in the log
@@ -112,7 +115,7 @@ func ChangeDirectory(target string) {
 	projectPath := findDirectory(target)
 	fmt.Println(projectPath)
 	addLogEntry(projectPath)
-	RefreshLog()
+	RefreshLog(false)
 }
 
 // Append a log entry for the the given absolute path to the pd history file

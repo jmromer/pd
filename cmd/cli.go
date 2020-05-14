@@ -88,7 +88,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if target == "--pd-refresh" {
-			RefreshLog()
+			RefreshLog(true)
 			return
 		}
 
