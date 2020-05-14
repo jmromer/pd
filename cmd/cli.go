@@ -71,34 +71,23 @@ var rootCmd = &cobra.Command{
 	Short: "A project / directory manager and FZF-powered fuzzy-selector.",
 	Run: func(cmd *cobra.Command, args []string) {
 		target := strings.Trim(strings.Join(args, " "), " ")
-		if len(target) == 0 {
-			SelectProject()
-			return
-		}
-
-		if target == "--help" {
-			fmt.Println(help)
-			return
-		}
-
-		if strings.HasPrefix(target, "--fzf-preview") {
-			label := strings.Trim(strings.Replace(target, "--fzf-preview", "", 1), " ")
-			FzfPreview(label)
-			return
-		}
-
-		if target == "--pd-refresh" {
-			RefreshLog(true)
-			return
-		}
-
 		dirStackFlag := regexp.MustCompile("\\A[-+][0-9]*\\z")
-		if dirStackFlag.MatchString(target) {
-			fmt.Println(target)
-			return
-		}
 
-		ChangeDirectory(target)
+		switch {
+		case len(target) == 0:
+			SelectProject()
+		case target == "--help":
+			fmt.Println(help)
+		case strings.HasPrefix(target, "--fzf-preview"):
+			label := strings.Replace(target, "--fzf-preview", "", 1)
+			FzfPreview(strings.Trim(label, " "))
+		case target == "--pd-refresh":
+			RefreshLog(true)
+		case dirStackFlag.MatchString(target):
+			fmt.Println(target)
+		default:
+			ChangeDirectory(target)
+		}
 	},
 	DisableFlagParsing: true,
 	SilenceErrors:      true,
