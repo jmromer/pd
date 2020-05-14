@@ -71,44 +71,40 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		target := strings.Trim(strings.Join(args, " "), " ")
 		if len(target) == 0 {
-			selectProject()
+			SelectProject()
 			return
 		}
+
 		if target == "--help" {
 			fmt.Println(help)
 			return
 		}
+
 		// Given a project label, generate a preview (file listing) of its contents.
 		// Examples:
 		// pd --fzf-preview my-project Documents/projects
 		// pd --fzf-preview my-other-project
 		if strings.HasPrefix(target, "--fzf-preview") {
 			label := strings.Trim(strings.Replace(target, "--fzf-preview", "", 1), " ")
-			listProjectFiles(label)
+			FzfPreview(label)
 			return
 		}
+
 		// Find all version-controlled projects $HOME and refresh the history.
 		// Refreshing the history removes any directories that no longer exist,
 		// and re-aggregates and re-ranks entries.
 		if target == "--pd-refresh" {
-			// scan home directory for all projects
-			projects := collectUserProjects()
-			// retrieve current log entries
-			logEntries := currentlyLoggedProjects()
-			// keep only those found projects not currently in the log
-			entries := collectEntries(projects, logEntries)
-			refreshProjectListing(entries)
+			RefreshLog()
 			return
 		}
+
 		dirStackFlag := regexp.MustCompile("\\A[-+][0-9]+\\z")
 		if dirStackFlag.MatchString(target) {
 			fmt.Println(target)
 			return
 		}
-		projectPath := findDirectory(target)
-		fmt.Println(projectPath)
-		entry := buildLogEntry(projectPath)
-		refreshProjectListing([]LogEntry{entry})
+
+		ChangeDirectory(target)
 	},
 	DisableFlagParsing: true,
 	SilenceErrors:      true,

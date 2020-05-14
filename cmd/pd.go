@@ -31,6 +31,90 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
+// Use FZF to select a project directory, printing to stdout the absolute path
+// to the project directory.
+func SelectProject() {
+	fzf, err := finder.New(
+		"fzf",
+		"--ansi",
+		"--bind 'ctrl-b:preview-up'",
+		"--bind 'ctrl-f:preview-down'",
+		"--cycle",
+		"--no-multi",
+		"--no-sort",
+		"--preview='pd --fzf-preview {+}'",
+		"--reverse",
+		"--tiebreak=index",
+	)
+	check(err)
+
+	if !exists(historyFile) {
+		RefreshLog()
+	}
+
+	fzf.Read(historyFileSource())
+	selection, err := fzf.Run()
+	check(err)
+
+	if len(selection) > 0 {
+		fmt.Println(projectLabelToAbsPath(selection[0]))
+	}
+}
+
+// FzfPreview triggers a preview (file listing) of the directory associated with
+// the given project label.
+//
+// List the files in the directory associated with the given project label.
+// Used in the FZF preview window. Attempts to do this using exa, then tree if
+// exa is unavailable or fails. Falls back to ls if both fail.
+//
+// Examples:
+// pd --fzf-preview my-project Documents/projects
+// pd --fzf-preview my-other-project
+func FzfPreview(label string) {
+	path := projectLabelToAbsPath(label)
+	abbreviated := strings.Replace(path, homeDir(), "~", 1)
+
+	list, err := listFilesExa(path, abbreviated)
+	if err != nil {
+		list, err = listFilesTree(path)
+	} else if err != nil {
+		list, err = listFilesLs(path, abbreviated)
+	}
+
+	if err == nil && len(list) > 0 {
+		fmt.Println(list)
+	} else if len(list) == 0 {
+		fmt.Println("Empty.")
+	} else if !exists(path) {
+		fmt.Println("Directory does not exist.")
+	} else {
+		fmt.Println("Could not list contents.")
+	}
+}
+
+// RefreshLog finds all version-controlled projects $HOME and refresh the
+// history. Refreshing the history removes any directories that no longer exist,
+// and re-aggregates and re-ranks entries.
+func RefreshLog() {
+	// scan home directory for all projects
+	projects := collectUserProjects()
+	// retrieve current log entries
+	logEntries := currentlyLoggedProjects()
+	// keep only those found projects not currently in the log
+	entries := collectEntries(projects, logEntries)
+	refreshProjectListing(entries)
+}
+
+// ChangeDirectory resolves the given path to an absolute path
+// Logs an entry to the history log and refreshes the project listing
+func ChangeDirectory(target string) {
+	projectPath := findDirectory(target)
+	fmt.Println(projectPath)
+	entry := buildLogEntry(projectPath)
+	refreshProjectListing([]LogEntry{entry})
+}
+
 // Append a log entry for the the given absolute path to the pd history file
 func addLogEntry(abspath string) {
 	f, err := os.OpenFile(
@@ -105,41 +189,13 @@ func collectUserProjects() []string {
 	return projects
 }
 
-// Use FZF to select a project directory, printing to stdout the absolute path
-// to the project directory.
-func selectProject() {
-	fzf, err := finder.New(
-		"fzf",
-		"--ansi",
-		"--bind 'ctrl-b:preview-up'",
-		"--bind 'ctrl-f:preview-down'",
-		"--cycle",
-		"--no-multi",
-		"--no-sort",
-		"--preview='pd --fzf-preview {+}'",
-		"--reverse",
-		"--tiebreak=index",
-	)
-	check(err)
-
-	if !exists(historyFile) {
-		projects := collectUserProjects()
-		logEntries := make(map[string]LogEntry)
-		entries := collectEntries(projects, logEntries)
-		refreshProjectListing(entries)
-	}
-
-	fzf.Read(historyFileSource())
-	selection, err := fzf.Run()
-	check(err)
-
-	if len(selection) > 0 {
-		fmt.Println(projectLabelToAbsPath(selection[0]))
-	}
-}
-
 func currentlyLoggedProjects() map[string]LogEntry {
 	entries := make(map[string]LogEntry)
+
+	if !exists(historyFile) {
+		return entries
+	}
+
 	fp, err := os.Open(historyFile)
 	check(err)
 	defer fp.Close()
@@ -285,29 +341,4 @@ func writeLogEntry(entry LogEntry, file *os.File) {
 	)
 	_, err := file.WriteString(line)
 	check(err)
-}
-
-// List the files in the directory associated with the given project label.
-// Used in the FZF preview window. Attempts to do this using exa, then tree if
-// exa is unavailable or fails. Falls back to ls if both fail.
-func listProjectFiles(label string) {
-	path := projectLabelToAbsPath(label)
-	abbreviated := strings.Replace(path, homeDir(), "~", 1)
-
-	list, err := listFilesExa(path, abbreviated)
-	if err != nil {
-		list, err = listFilesTree(path)
-	} else if err != nil {
-		list, err = listFilesLs(path, abbreviated)
-	}
-
-	if err == nil && len(list) > 0 {
-		fmt.Println(list)
-	} else if len(list) == 0 {
-		fmt.Println("Empty.")
-	} else if !exists(path) {
-		fmt.Println("Directory does not exist.")
-	} else {
-		fmt.Println("Could not list contents.")
-	}
 }
