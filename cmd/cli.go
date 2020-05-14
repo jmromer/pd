@@ -51,6 +51,7 @@ behavior of cd unchanged.
 Examples:
   pd -2
   pd +1
+  pd -
 
 Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 `
@@ -80,25 +81,18 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		// Given a project label, generate a preview (file listing) of its contents.
-		// Examples:
-		// pd --fzf-preview my-project Documents/projects
-		// pd --fzf-preview my-other-project
 		if strings.HasPrefix(target, "--fzf-preview") {
 			label := strings.Trim(strings.Replace(target, "--fzf-preview", "", 1), " ")
 			FzfPreview(label)
 			return
 		}
 
-		// Find all version-controlled projects $HOME and refresh the history.
-		// Refreshing the history removes any directories that no longer exist,
-		// and re-aggregates and re-ranks entries.
 		if target == "--pd-refresh" {
 			RefreshLog()
 			return
 		}
 
-		dirStackFlag := regexp.MustCompile("\\A[-+][0-9]+\\z")
+		dirStackFlag := regexp.MustCompile("\\A[-+][0-9]*\\z")
 		if dirStackFlag.MatchString(target) {
 			fmt.Println(target)
 			return
