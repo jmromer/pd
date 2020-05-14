@@ -83,7 +83,7 @@ var rootCmd = &cobra.Command{
 		// pd --fzf-preview my-project Documents/projects
 		// pd --fzf-preview my-other-project
 		if strings.HasPrefix(target, "--fzf-preview") {
-			label := strings.Replace(target, "--fzf-preview", "", 1)
+			label := strings.Trim(strings.Replace(target, "--fzf-preview", "", 1), " ")
 			listProjectFiles(label)
 			return
 		}
