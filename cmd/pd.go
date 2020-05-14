@@ -123,7 +123,10 @@ func selectProject() {
 	check(err)
 
 	if !exists(historyFile) {
-		collectUserProjects()
+		projects := collectUserProjects()
+		logEntries := make(map[string]LogEntry)
+		entries := collectEntries(projects, logEntries)
+		refreshProjectListing(entries)
 	}
 
 	fzf.Read(historyFileSource())
