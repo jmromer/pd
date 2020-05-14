@@ -57,28 +57,52 @@ func findDirectory(path string) string {
 }
 
 // Scan the current user's home directory for projects
-// "Projects" being directories under version control or with .projectile file.
-func collectProjects() {
+//
+// "Projects" being directories under version control or that include
+// .projectile file.
+//
+// For a given file path, skip to the next iteration if:
+//
+//   1. The file isn't a directory
+//   2. The directory begins with a `.`
+//   3. The directory is in the given skip list
+//
+// Otherwise, collect the directory and skip to the next iteration without
+// recursing into the directory (nested projects won't be logged unless manually
+// visited).
+func collectUserProjects() []string {
 	if debug {
 		fmt.Println("Finding project directories...")
 	}
+	projects := []string{}
 	skipDirs := map[string]bool{
 		// TODO: Add config knob for this
 		os.ExpandEnv("$HOME/Library"): true,
 	}
 
-	// TODO: Append don't overwrite, creating if necessary
-	file, err := os.Create(historyFile)
-	check(err)
-	defer file.Close()
-
 	filepath.Walk(
 		homeDir(),
 		func(path string, info os.FileInfo, err error) error {
-			return collectProjectDir(path, skipDirs, info, file, err)
+			// If the given file isn't a directory, we can skip it
+			if err != nil || !info.IsDir() {
+				return nil
+			}
+			// if the given directory is skippable (or a .dotfile directory)
+			// skip it, don't recurse into it
+			if strings.HasPrefix(info.Name(), ".") || skipDirs[path] {
+				return filepath.SkipDir
+			}
+			// if the given directory is a project,
+			// log its path and don't recurse into it.
+			if err == nil && isProject(path) {
+				projects = append(projects, path)
+				return filepath.SkipDir
+			}
+			return nil
 		},
 	)
-	file.Sync()
+
+	return projects
 }
 
 // Use FZF to select a project directory, printing to stdout the absolute path
@@ -99,7 +123,7 @@ func selectProject() {
 	check(err)
 
 	if !exists(historyFile) {
-		collectProjects()
+		collectUserProjects()
 	}
 
 	fzf.Read(historyFileSource())
@@ -111,41 +135,55 @@ func selectProject() {
 	}
 }
 
-// Refresh the pd history file
-// Re-aggregate and re-rank entries, remove directories that no longer exist.
-func refreshProjectListing() {
-	if debug {
-		fmt.Println("Refreshing project listing...")
-	}
-
-	entryLabels := map[string]string{}
-	entryCounts := map[string]int{}
-
+func currentlyLoggedProjects() map[string]LogEntry {
+	entries := make(map[string]LogEntry)
 	fp, err := os.Open(historyFile)
 	check(err)
 	defer fp.Close()
 
 	scanner := bufio.NewScanner(fp)
 	for scanner.Scan() {
-		entry := strings.Split(scanner.Text(), ",")
-		count := 0
-		count, _ = strconv.Atoi(entry[0])
-		abspath := entry[1]
-		label := entry[2]
+		line := strings.Split(scanner.Text(), ",")
+		currCount, _ := strconv.Atoi(line[0])
+		abspath := line[1]
+		label := line[2]
 
-		if exists(abspath) {
-			entryLabels[abspath] = label
-			entryCounts[abspath] += count
+		entry, isAlreadyCounted := entries[abspath]
+		if isAlreadyCounted {
+			entry.Count += currCount
+		} else {
+			entry = LogEntry{Count: currCount, AbsolutePath: abspath, Label: label}
 		}
+		entries[abspath] = entry
+	}
+	return entries
+}
+
+func collectEntries(foundPaths []string, currEntries map[string]LogEntry) (entries []LogEntry) {
+	// Keep all current (still current) entries
+	for abspath, entry := range currEntries {
+		if exists(abspath) {
+			entries = append(entries, entry)
+		}
+	}
+	// Keep new entries
+	for _, abspath := range foundPaths {
+		_, isAlreadyLogged := currEntries[abspath]
+		if !isAlreadyLogged {
+			entries = append(entries, buildLogEntry(abspath))
+		}
+	}
+	return
+}
+
+// Refresh the pd history file
+// Re-aggregate and re-rank entries, remove directories that no longer exist.
+func refreshProjectListing(entries []LogEntry) {
+	if debug {
+		fmt.Println("Refreshing project listing...")
 	}
 
 	// aggregate log entries, sorting by count in desc order
-	i := 0
-	entries := make([]LogEntry, len(entryCounts))
-	for path, ct := range entryCounts {
-		entries[i] = LogEntry{Count: ct, AbsolutePath: path, Label: entryLabels[path]}
-		i += 1
-	}
 	sort.Sort(ByCount(entries))
 
 	// write sorted entries to log
@@ -190,37 +228,6 @@ func buildLogEntry(abspath string) LogEntry {
 	)
 
 	return LogEntry{Count: 1, AbsolutePath: abspath, Label: label}
-}
-
-// Logic invoked when walking the file tree in `collectProjects`.
-// For a given file path, skip to the next iteration if:
-//
-// 1. The file isn't a directory
-// 2. The directory begins with a `.`
-// 3. The directory is in the given skip list
-//
-// Otherwise, log the directory and skip to the next iteration without recursing
-// into the directory (nested projects won't be logged unless manually visited).
-func collectProjectDir(path string, skipDirs map[string]bool, info os.FileInfo, file *os.File, err error) error {
-	// If the given file isn't a directory, we can skip it
-	if err != nil || !info.IsDir() {
-		return nil
-	}
-
-	// if the given directory is skippable (or a .dotfile directory)
-	// skip it, don't recurse into it
-	if strings.HasPrefix(info.Name(), ".") || skipDirs[path] {
-		return filepath.SkipDir
-	}
-
-	// if the given directory is a project,
-	// log its path and don't recurse into it.
-	if err == nil && isProject(path) {
-		writeLogEntry(buildLogEntry(path), file)
-		return filepath.SkipDir
-	}
-
-	return nil
 }
 
 // Stream the history file's contents
