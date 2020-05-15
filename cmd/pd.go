@@ -26,6 +26,7 @@ import (
 	"time"
 
 	finder "github.com/b4b4r07/go-finder"
+	"github.com/b4b4r07/go-finder/source"
 	"github.com/logrusorgru/aurora"
 )
 
@@ -50,28 +51,52 @@ func SelectProject() {
 		RefreshLog(true)
 	}
 
+	// projects: maps abspaths to LogEntries
 	projects := currentlyLoggedProjects()
-	items := finder.NewItems()
 
-	for _, proj := range projects {
-		items.Add(proj.Label(), proj)
+	// bail if no projects logged
+	if len(projects) == 0 {
+		fmt.Println(workingDir())
+		return
 	}
 
-	selection, err := fzf.Select(items)
+	listingEntries, listingIndex := searchListing(projects)
+	fzf.Read(listingEntries)
+
+	selection, err := fzf.Run()
 	check(err)
 
+	// bail if selection is canceled
 	if len(selection) == 0 {
 		fmt.Println(workingDir())
 		return
 	}
 
-	for _, project := range selection {
-		proj := project.(LogEntry)
-		fmt.Println(proj.AbsPath)
-		addLogEntry(proj.AbsPath)
-	}
+	// the selected label is stripped of ansi color codes
+	// use listingIndex to retrieve the associated abspath
+	fmt.Println(listingIndex[selection[0]])
 
 	RefreshLog(false)
+}
+
+// Build an FZF listing and a listing index
+//
+// The `listing` is a slice of formatted labels (ansi-colored)
+// The `index` maps labels (without color codes) to abs paths.
+//
+// Return:
+// (0) a Source object to be passed to a finder's Read method
+// (1) the `index` mapping
+func searchListing(projects map[string]LogEntry) (source.Source, map[string]string) {
+	listing := []string{}
+	index := map[string]string{}
+
+	for _, project := range projects {
+		index[project.Label()] = project.AbsPath
+		listing = append(listing, project.Formatted())
+	}
+
+	return source.Slice(listing), index
 }
 
 // FzfPreview triggers a preview (file listing) of the directory associated with
