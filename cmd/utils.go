@@ -27,67 +27,56 @@ import (
 )
 
 // Exists returns true if the given file or directory exists, else false.
-// TODO: concentrate error checking here
 func exists(path string) bool {
 	_, err := os.Stat(path)
-
-	if err == nil {
-		return true
-	}
-
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	return true
+	return err == nil || !os.IsNotExist(err)
 }
 
-// TODO: Add doc
+// Expand the given path to an absolute path
+// Expand placeholders like `.` and `~` to their canonical form.
+// Return the home directory if given the empty string.
 func expandPath(path string) string {
-	if len(path) == 0 {
-		return homeDir()
-	}
-
-	// resolve to lexical file path
 	path = filepath.Clean(path)
-	if path == "." {
-		pwd, err := os.Getwd()
-		check(err)
-		return pwd
-	}
-
-	// expand home directory if a tilde is passed
 	if strings.HasPrefix(path, "~") {
 		path = strings.Replace(path, "~", homeDir(), 1)
 	}
-
-	// expand to absolute path
 	abspath, err := filepath.Abs(path)
 	check(err)
-
 	return abspath
 }
 
-// TODO: Add doc
+// Return the current user's home directory.
 func homeDir() string {
 	home, err := homedir.Dir()
 	check(err)
 	return home
 }
 
+// Return the current user's current working directory.
+func workingDir() string {
+	pwd, err := os.Getwd()
+	check(err)
+	return pwd
+}
+
+// Return true if the given path is a project.
+// (i.e., a directory under version control or a Projectile project)
 func isProject(path string) bool {
-	return isGitProject(path) || isProjectile(path)
+	return isVersionControlled(path) || isProjectile(path)
 }
 
-func isGitProject(path string) bool {
-	return exists(filepath.Join(path, ".git"))
+// Return true if the given path is under version control.
+// Currently only supports Git.
+func isVersionControlled(path string) bool {
+	return exists(filepath.Join(path, ".git/"))
 }
 
+// Return true if the given path is a projectile project.
 func isProjectile(path string) bool {
 	return exists(filepath.Join(path, ".projectile"))
 }
 
-// TODO: Add doc
+// if there's an error, print it out and exit with a failure exit code.
 func check(err error) {
 	if err != nil {
 		fmt.Println(err.Error())

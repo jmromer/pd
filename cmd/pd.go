@@ -61,6 +61,8 @@ func SelectProject() {
 		fmt.Println(abspath)
 		addLogEntry(abspath)
 		RefreshLog(false)
+	} else {
+		fmt.Println(workingDir())
 	}
 }
 
@@ -77,21 +79,22 @@ func SelectProject() {
 func FzfPreview(label string) {
 	path := projectLabelToAbsPath(label)
 	abbreviated := strings.Replace(path, homeDir(), "~", 1)
-
 	list, err := listFilesExa(path, abbreviated)
-	if err != nil {
-		list, err = listFilesTree(path)
-	} else if err != nil {
-		list, err = listFilesLs(path, abbreviated)
-	}
 
-	if err == nil && len(list) > 0 {
+	switch {
+	case err != nil:
+		list, err = listFilesTree(path)
+		fallthrough
+	case err != nil:
+		list, err = listFilesLs(path, abbreviated)
+		fallthrough
+	case err == nil && len(list) > 0:
 		fmt.Println(list)
-	} else if len(list) == 0 {
-		fmt.Println("Empty.")
-	} else if !exists(path) {
+	case len(list) == 0:
+		fmt.Println("Empty")
+	case !exists(path):
 		fmt.Println("Directory does not exist.")
-	} else {
+	default:
 		fmt.Println("Could not list contents.")
 	}
 }
@@ -100,15 +103,21 @@ func FzfPreview(label string) {
 // history. Refreshing the history removes any directories that no longer exist,
 // and re-aggregates and re-ranks entries.
 func RefreshLog(searchForProjects bool) {
-	projects := []string{}
+	var projects []string
+
 	if searchForProjects {
-		// scan home directory for all projects
+		// scan home directory for all project paths
 		projects = collectUserProjects()
+	} else {
+		projects = []string{}
 	}
+
 	// retrieve current log entries
 	logEntries := currentlyLoggedProjects()
+
 	// keep only those found projects not currently in the log
 	entries := collectEntries(projects, logEntries)
+
 	refreshProjectListing(entries)
 }
 
@@ -166,7 +175,7 @@ func collectUserProjects() []string {
 	}
 	projects := []string{}
 	skipDirs := map[string]bool{
-		// TODO: Add config knob for this
+		// TODO: Add config file knob for this
 		os.ExpandEnv("$HOME/Library"): true,
 	}
 
