@@ -182,22 +182,26 @@ func collectUserProjects() []string {
 	filepath.Walk(
 		homeDir(),
 		func(path string, info os.FileInfo, err error) error {
-			// If the given file isn't a directory, we can skip it
-			if err != nil || !info.IsDir() {
+			switch {
+			case err != nil:
 				return nil
-			}
-			// if the given directory is skippable (or a .dotfile directory)
-			// skip it, don't recurse into it
-			if strings.HasPrefix(info.Name(), ".") || skipDirs[path] {
+			case !info.IsDir():
+				// if the given file isn't a directory, we can skip it
+				return nil
+			case strings.HasPrefix(info.Name(), "."):
+				// if the given directory is a dotfile directory
 				return filepath.SkipDir
-			}
-			// if the given directory is a project,
-			// log its path and don't recurse into it.
-			if err == nil && isProject(path) {
+			case skipDirs[path]:
+				// if the given directory is in the skip list
+				return filepath.SkipDir
+			case isProject(path):
+				// if the given directory is a project,
+				// log its path and don't recurse into it.
 				projects = append(projects, path)
 				return filepath.SkipDir
+			default:
+				return nil
 			}
-			return nil
 		},
 	)
 
