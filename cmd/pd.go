@@ -41,7 +41,7 @@ func SelectProject() {
 		"--cycle",
 		"--no-multi",
 		"--no-sort",
-		"--preview='pd --fzf-preview {+}'",
+		"--preview=\"pd --fzf-preview '{+}'\"",
 		"--reverse",
 		"--tiebreak=index",
 	)
@@ -90,22 +90,22 @@ func SelectProject() {
 // pd --fzf-preview my-project Documents/projects
 // pd --fzf-preview my-other-project
 func FzfPreview(label string) {
-	path := projectLabelToAbsPath(label)
-	abbreviated := strings.Replace(path, homeDir(), "~", 1)
-	list, err := listFilesExa(path, abbreviated)
+	abspath := projectLabelToAbsPath(label)
+	abbreviated := strings.Replace(abspath, homeDir(), "~", 1)
+	list, err := listFilesExa(abspath, abbreviated)
 
 	switch {
 	case err != nil:
-		list, err = listFilesTree(path)
+		list, err = listFilesTree(abspath)
 		fallthrough
 	case err != nil:
-		list, err = listFilesLs(path, abbreviated)
+		list, err = listFilesLs(abspath, abbreviated)
 		fallthrough
 	case err == nil && len(list) > 0:
 		fmt.Println(list)
 	case len(list) == 0:
 		fmt.Println("Empty")
-	case !exists(path):
+	case !exists(abspath):
 		fmt.Println("Directory does not exist.")
 	default:
 		fmt.Println("Could not list contents.")
@@ -305,11 +305,10 @@ type LogEntry struct {
 }
 
 func (e LogEntry) Formatted() string {
-	return strings.Join(
-		[]string{
-			aurora.Blue(e.Name).String(),
-			aurora.Gray(12-1, e.Path).String(),
-		}, " ")
+	name := aurora.Blue(e.Name).String()
+	path := aurora.Gray(12-1, e.Path).String()
+	elts := []string{name, path}
+	return strings.Join(elts, " ")
 }
 
 func (e LogEntry) Label() string {
@@ -324,8 +323,7 @@ func (a ByCount) Less(i, j int) bool { return a[j].Count < a[i].Count }
 
 // Given an absolute path, parse out a project label and return a new LogEntry.
 func buildLogEntry(abspath string) LogEntry {
-	homeDir := fmt.Sprintf("%s/", homeDir())
-	path := strings.Replace(abspath, homeDir, "", -1)
+	path := strings.Replace(abspath, homeDir(), "~", -1)
 	components := strings.Split(path, "/")
 
 	last := len(components) - 1
@@ -341,26 +339,25 @@ func buildLogEntry(abspath string) LogEntry {
 
 // Given a project label, re-construct the absolute path that was used to
 // generate it.
-//
-// TODO: Find a better way to do this, since it's a lossy process and leaves
-// some un-fixable corner cases. Ideally we want to display the project label
-// when fuzzy-selecting but return the associated absolute path without parsing
-// it out.
 func projectLabelToAbsPath(label string) string {
-	comps := strings.Split(label, " ")
-	proj := comps[0]
-	abspath := homeDir()
-
+	comps := strings.Split(label, " ~/")
 	if len(comps) > 1 {
-		path := strings.Join(comps[1:], " ")
-		if strings.HasPrefix(path, "/") {
-			abspath = path
-		} else {
-			abspath = filepath.Join(abspath, path)
-		}
+		projName := comps[0]
+		pathLabel := comps[1]
+
+		path := fmt.Sprintf("%s/%s", homeDir(), pathLabel)
+		return filepath.Join(path, projName)
 	}
 
-	return filepath.Join(abspath, proj)
+	comps = strings.Split(label, " /")
+	if len(comps) > 1 {
+		projName := comps[0]
+		pathLabel := comps[1]
+		path := fmt.Sprintf("/%s", pathLabel)
+		return filepath.Join(path, projName)
+	}
+
+	return ""
 }
 
 // Build an FZF listing and a listing index
