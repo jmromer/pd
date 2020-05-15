@@ -18,7 +18,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,7 +26,6 @@ import (
 	"time"
 
 	finder "github.com/b4b4r07/go-finder"
-	"github.com/b4b4r07/go-finder/source"
 	"github.com/logrusorgru/aurora"
 )
 
@@ -52,18 +50,28 @@ func SelectProject() {
 		RefreshLog(true)
 	}
 
-	fzf.Read(historyFileSource())
-	selection, err := fzf.Run()
+	projects := currentlyLoggedProjects()
+	items := finder.NewItems()
+
+	for _, proj := range projects {
+		items.Add(proj.Label(), proj)
+	}
+
+	selection, err := fzf.Select(items)
 	check(err)
 
-	if len(selection) > 0 {
-		abspath := projectLabelToAbsPath(selection[0])
-		fmt.Println(abspath)
-		addLogEntry(abspath)
-		RefreshLog(false)
-	} else {
+	if len(selection) == 0 {
 		fmt.Println(workingDir())
+		return
 	}
+
+	for _, project := range selection {
+		proj := project.(LogEntry)
+		fmt.Println(proj.AbsPath)
+		addLogEntry(proj.AbsPath)
+	}
+
+	RefreshLog(false)
 }
 
 // FzfPreview triggers a preview (file listing) of the directory associated with
@@ -224,7 +232,8 @@ func currentlyLoggedProjects() map[string]LogEntry {
 		line := strings.Split(scanner.Text(), ",")
 		currCount, _ := strconv.Atoi(line[0])
 		abspath := line[1]
-		label := line[2]
+		projectName := line[2]
+		projectPath := line[3]
 
 		entry, isAlreadyCounted := entries[abspath]
 		if isAlreadyCounted {
@@ -232,9 +241,10 @@ func currentlyLoggedProjects() map[string]LogEntry {
 		}
 
 		entries[abspath] = LogEntry{
-			Count:        currCount,
-			AbsolutePath: abspath,
-			Label:        label,
+			Count:   currCount,
+			AbsPath: abspath,
+			Name:    projectName,
+			Path:    projectPath,
 		}
 	}
 	return entries
@@ -270,7 +280,7 @@ func refreshProjectListing(entries []LogEntry) {
 	check(err)
 	defer f.Close()
 	for _, entry := range entries {
-		if exists(entry.AbsolutePath) {
+		if exists(entry.AbsPath) {
 			writeLogEntry(entry, f)
 		}
 	}
@@ -283,9 +293,22 @@ func refreshProjectListing(entries []LogEntry) {
 // Each entry in the pd history file consists of a count, an abs path, and the
 // colored project label to be used in the FZF interface.
 type LogEntry struct {
-	Count        int
-	AbsolutePath string
-	Label        string
+	Count   int
+	AbsPath string
+	Name    string
+	Path    string
+}
+
+func (e LogEntry) Formatted() string {
+	return strings.Join(
+		[]string{
+			aurora.Blue(e.Name).String(),
+			aurora.Gray(12-1, e.Path).String(),
+		}, " ")
+}
+
+func (e LogEntry) Label() string {
+	return strings.Join([]string{e.Name, e.Path}, " ")
 }
 
 type ByCount []LogEntry
@@ -302,32 +325,12 @@ func buildLogEntry(abspath string) LogEntry {
 
 	last := len(components) - 1
 	location := strings.Join(components[0:last], "/")
-	label := fmt.Sprintf(
-		"%s %s",
-		aurora.Blue(components[last]).String(),
-		aurora.Gray(12-1, location).String(),
-	)
 
-	return LogEntry{Count: 1, AbsolutePath: abspath, Label: label}
-}
-
-// Stream the history file's contents
-func historyFileSource() source.Source {
-	return func(out io.WriteCloser) error {
-		fp, err := os.Open(historyFile)
-		check(err)
-		defer fp.Close()
-
-		scanner := bufio.NewScanner(fp)
-		for scanner.Scan() {
-			entry := strings.Split(scanner.Text(), ",")
-			abspath := entry[1]
-			label := entry[2]
-			if exists(abspath) {
-				fmt.Fprintln(out, label)
-			}
-		}
-		return scanner.Err()
+	return LogEntry{
+		Count:   1,
+		AbsPath: abspath,
+		Name:    components[last],
+		Path:    location,
 	}
 }
 
@@ -360,10 +363,11 @@ func projectLabelToAbsPath(label string) string {
 // `count`, `absolute path`, and `project label`
 func writeLogEntry(entry LogEntry, file *os.File) {
 	line := fmt.Sprintf(
-		"%d,%s,%s\n",
+		"%d,%s,%s,%s\n",
 		entry.Count,
-		entry.AbsolutePath,
-		entry.Label,
+		entry.AbsPath,
+		entry.Name,
+		entry.Path,
 	)
 	_, err := file.WriteString(line)
 	check(err)
