@@ -74,7 +74,9 @@ func SelectProject() {
 
 	// the selected label is stripped of ansi color codes
 	// use listingIndex to retrieve the associated abspath
-	fmt.Println(listingIndex[selection[0]])
+	abspath := listingIndex[selection[0]]
+	fmt.Println(abspath)
+	addLogEntry(abspath)
 
 	RefreshLog(false)
 }
