@@ -3,6 +3,12 @@ p/d
 
 A project / directory manager and FZF-powered fuzzy-selector.
 
+Issue `pd` to search your home directory for version-controlled projects and
+index them. You'll be able to fuzzy-select from this list, which is ranked in
+order of visit frequency. Use `pd` in tandem with `cd` (see below) to add new
+directories to the index, and log new visits.
+
+
 [![asciicast][ascii-svg]][ascii]
 
 Recommended setup
@@ -24,5 +30,5 @@ cd() {
 bindkey -s '^o' 'cd\n'
 ```
 
-[ascii-svg]: https://asciinema.org/a/sqrGsf4drptaOyU6UUaJ4OSgN.svg
-[ascii]: https://asciinema.org/a/sqrGsf4drptaOyU6UUaJ4OSgN
+[ascii-svg]: https://asciinema.org/a/330578.svg
+[ascii]: https://asciinema.org/a/330578
