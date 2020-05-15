@@ -155,7 +155,8 @@ func addLogEntry(abspath string) {
 	)
 	check(err)
 	defer f.Close()
-	writeLogEntry(buildLogEntry(abspath), f)
+	entry := buildLogEntry(abspath)
+	entry.WriteLogLine(f)
 }
 
 // Resolve the given path to an absolute path to a directory.
@@ -280,17 +281,16 @@ func refreshProjectListing(entries []LogEntry) {
 		fmt.Println("Refreshing project listing...")
 	}
 
-	// aggregate log entries, sorting by count in desc order
-	sort.Sort(ByCount(entries))
-
-	// write sorted entries to log
+	// create history file, overwriting if need be
 	f, err := os.Create(expandPath(historyFile))
 	check(err)
 	defer f.Close()
+
+	// aggregate log entries, sorting by count in desc order
+	// write sorted entries to log
+	sort.Sort(ByCount(entries))
 	for _, entry := range entries {
-		if exists(entry.AbsPath) {
-			writeLogEntry(entry, f)
-		}
+		entry.WriteLogLine(f)
 	}
 
 	if debug {
@@ -307,15 +307,31 @@ type LogEntry struct {
 	Path    string
 }
 
-func (e LogEntry) Formatted() string {
+// Project label, formatted (ansi-color)
+func (e LogEntry) LabelFormatted() string {
 	name := aurora.Blue(e.Name).String()
 	path := aurora.Gray(12-1, e.Path).String()
 	elts := []string{name, path}
 	return strings.Join(elts, " ")
 }
 
+// Project label, unformatted
 func (e LogEntry) Label() string {
 	return strings.Join([]string{e.Name, e.Path}, " ")
+}
+
+// History entry format is CSV with
+// `count`, `absolute path`, and `project label`
+func (e LogEntry) LogLine() string {
+	return fmt.Sprintf("%d,%s,%s,%s\n", e.Count, e.AbsPath, e.Name, e.Path)
+}
+
+// Write the given LogEntry to the given file handle.
+func (e LogEntry) WriteLogLine(file *os.File) {
+	if exists(e.AbsPath) {
+		_, err := file.WriteString(e.LogLine())
+		check(err)
+	}
 }
 
 type ByCount []LogEntry
@@ -377,23 +393,8 @@ func searchListing(projects map[string]LogEntry) (source.Source, map[string]stri
 
 	for _, project := range projects {
 		index[project.Label()] = project.AbsPath
-		listing = append(listing, project.Formatted())
+		listing = append(listing, project.LabelFormatted())
 	}
 
 	return source.Slice(listing), index
-}
-
-// Write the given LogEntry to the given file handle.
-// History entry format is CSV with
-// `count`, `absolute path`, and `project label`
-func writeLogEntry(entry LogEntry, file *os.File) {
-	line := fmt.Sprintf(
-		"%d,%s,%s,%s\n",
-		entry.Count,
-		entry.AbsPath,
-		entry.Name,
-		entry.Path,
-	)
-	_, err := file.WriteString(line)
-	check(err)
 }
