@@ -18,7 +18,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,9 +39,10 @@ func SelectProject() {
 		"--bind 'ctrl-b:preview-up'",
 		"--bind 'ctrl-f:preview-down'",
 		"--cycle",
+		"--exact",
 		"--no-multi",
 		"--no-sort",
-		"--preview='pd --fzf-preview {+}'",
+		"--preview=\"pd --fzf-preview '{+}'\"",
 		"--reverse",
 		"--tiebreak=index",
 	)
@@ -52,18 +52,34 @@ func SelectProject() {
 		RefreshLog(true)
 	}
 
-	fzf.Read(historyFileSource())
+	// projects: maps abspaths to LogEntries
+	projects := currentlyLoggedProjects()
+
+	// bail if no projects logged
+	if len(projects) == 0 {
+		fmt.Println(workingDir())
+		return
+	}
+
+	listingEntries, listingIndex := searchListing(projects)
+	fzf.Read(listingEntries)
+
 	selection, err := fzf.Run()
 	check(err)
 
-	if len(selection) > 0 {
-		abspath := projectLabelToAbsPath(selection[0])
-		fmt.Println(abspath)
-		addLogEntry(abspath)
-		RefreshLog(false)
-	} else {
+	// bail if selection is canceled
+	if len(selection) == 0 {
 		fmt.Println(workingDir())
+		return
 	}
+
+	// the selected label is stripped of ansi color codes
+	// use listingIndex to retrieve the associated abspath
+	abspath := listingIndex[selection[0]]
+	fmt.Println(abspath)
+	addLogEntry(abspath)
+
+	RefreshLog(false)
 }
 
 // FzfPreview triggers a preview (file listing) of the directory associated with
@@ -77,22 +93,22 @@ func SelectProject() {
 // pd --fzf-preview my-project Documents/projects
 // pd --fzf-preview my-other-project
 func FzfPreview(label string) {
-	path := projectLabelToAbsPath(label)
-	abbreviated := strings.Replace(path, homeDir(), "~", 1)
-	list, err := listFilesExa(path, abbreviated)
+	abspath := projectLabelToAbsPath(label)
+	abbreviated := strings.Replace(abspath, homeDir(), "~", 1)
+	list, err := listFilesExa(abspath, abbreviated)
 
 	switch {
 	case err != nil:
-		list, err = listFilesTree(path)
+		list, err = listFilesTree(abspath)
 		fallthrough
 	case err != nil:
-		list, err = listFilesLs(path, abbreviated)
+		list, err = listFilesLs(abspath, abbreviated)
 		fallthrough
 	case err == nil && len(list) > 0:
 		fmt.Println(list)
 	case len(list) == 0:
 		fmt.Println("Empty")
-	case !exists(path):
+	case !exists(abspath):
 		fmt.Println("Directory does not exist.")
 	default:
 		fmt.Println("Could not list contents.")
@@ -139,7 +155,8 @@ func addLogEntry(abspath string) {
 	)
 	check(err)
 	defer f.Close()
-	writeLogEntry(buildLogEntry(abspath), f)
+	entry := buildLogEntry(abspath)
+	entry.WriteLogLine(f)
 }
 
 // Resolve the given path to an absolute path to a directory.
@@ -224,7 +241,8 @@ func currentlyLoggedProjects() map[string]LogEntry {
 		line := strings.Split(scanner.Text(), ",")
 		currCount, _ := strconv.Atoi(line[0])
 		abspath := line[1]
-		label := line[2]
+		projectName := line[2]
+		projectPath := line[3]
 
 		entry, isAlreadyCounted := entries[abspath]
 		if isAlreadyCounted {
@@ -232,9 +250,10 @@ func currentlyLoggedProjects() map[string]LogEntry {
 		}
 
 		entries[abspath] = LogEntry{
-			Count:        currCount,
-			AbsolutePath: abspath,
-			Label:        label,
+			Count:   currCount,
+			AbsPath: abspath,
+			Name:    projectName,
+			Path:    projectPath,
 		}
 	}
 	return entries
@@ -262,17 +281,16 @@ func refreshProjectListing(entries []LogEntry) {
 		fmt.Println("Refreshing project listing...")
 	}
 
-	// aggregate log entries, sorting by count in desc order
-	sort.Sort(ByCount(entries))
-
-	// write sorted entries to log
+	// create history file, overwriting if need be
 	f, err := os.Create(expandPath(historyFile))
 	check(err)
 	defer f.Close()
+
+	// aggregate log entries, sorting by count in desc order
+	// write sorted entries to log
+	sort.Sort(ByCount(entries))
 	for _, entry := range entries {
-		if exists(entry.AbsolutePath) {
-			writeLogEntry(entry, f)
-		}
+		entry.WriteLogLine(f)
 	}
 
 	if debug {
@@ -283,9 +301,37 @@ func refreshProjectListing(entries []LogEntry) {
 // Each entry in the pd history file consists of a count, an abs path, and the
 // colored project label to be used in the FZF interface.
 type LogEntry struct {
-	Count        int
-	AbsolutePath string
-	Label        string
+	Count   int
+	AbsPath string
+	Name    string
+	Path    string
+}
+
+// Project label, formatted (ansi-color)
+func (e LogEntry) LabelFormatted() string {
+	name := aurora.Blue(e.Name).String()
+	path := aurora.Gray(12-1, e.Path).String()
+	elts := []string{name, path}
+	return strings.Join(elts, " ")
+}
+
+// Project label, unformatted
+func (e LogEntry) Label() string {
+	return strings.Join([]string{e.Name, e.Path}, " ")
+}
+
+// History entry format is CSV with
+// `count`, `absolute path`, and `project label`
+func (e LogEntry) LogLine() string {
+	return fmt.Sprintf("%d,%s,%s,%s\n", e.Count, e.AbsPath, e.Name, e.Path)
+}
+
+// Write the given LogEntry to the given file handle.
+func (e LogEntry) WriteLogLine(file *os.File) {
+	if exists(e.AbsPath) {
+		_, err := file.WriteString(e.LogLine())
+		check(err)
+	}
 }
 
 type ByCount []LogEntry
@@ -296,75 +342,59 @@ func (a ByCount) Less(i, j int) bool { return a[j].Count < a[i].Count }
 
 // Given an absolute path, parse out a project label and return a new LogEntry.
 func buildLogEntry(abspath string) LogEntry {
-	homeDir := fmt.Sprintf("%s/", homeDir())
-	path := strings.Replace(abspath, homeDir, "", -1)
+	path := strings.Replace(abspath, homeDir(), "~", -1)
 	components := strings.Split(path, "/")
 
 	last := len(components) - 1
 	location := strings.Join(components[0:last], "/")
-	label := fmt.Sprintf(
-		"%s %s",
-		aurora.Blue(components[last]).String(),
-		aurora.Gray(12-1, location).String(),
-	)
 
-	return LogEntry{Count: 1, AbsolutePath: abspath, Label: label}
-}
-
-// Stream the history file's contents
-func historyFileSource() source.Source {
-	return func(out io.WriteCloser) error {
-		fp, err := os.Open(historyFile)
-		check(err)
-		defer fp.Close()
-
-		scanner := bufio.NewScanner(fp)
-		for scanner.Scan() {
-			entry := strings.Split(scanner.Text(), ",")
-			abspath := entry[1]
-			label := entry[2]
-			if exists(abspath) {
-				fmt.Fprintln(out, label)
-			}
-		}
-		return scanner.Err()
+	return LogEntry{
+		Count:   1,
+		AbsPath: abspath,
+		Name:    components[last],
+		Path:    location,
 	}
 }
 
 // Given a project label, re-construct the absolute path that was used to
 // generate it.
-//
-// TODO: Find a better way to do this, since it's a lossy process and leaves
-// some un-fixable corner cases. Ideally we want to display the project label
-// when fuzzy-selecting but return the associated absolute path without parsing
-// it out.
 func projectLabelToAbsPath(label string) string {
-	comps := strings.Split(label, " ")
-	proj := comps[0]
-	abspath := homeDir()
-
+	comps := strings.Split(label, " ~/")
 	if len(comps) > 1 {
-		path := strings.Join(comps[1:], " ")
-		if strings.HasPrefix(path, "/") {
-			abspath = path
-		} else {
-			abspath = filepath.Join(abspath, path)
-		}
+		projName := comps[0]
+		pathLabel := comps[1]
+
+		path := fmt.Sprintf("%s/%s", homeDir(), pathLabel)
+		return filepath.Join(path, projName)
 	}
 
-	return filepath.Join(abspath, proj)
+	comps = strings.Split(label, " /")
+	if len(comps) > 1 {
+		projName := comps[0]
+		pathLabel := comps[1]
+		path := fmt.Sprintf("/%s", pathLabel)
+		return filepath.Join(path, projName)
+	}
+
+	return ""
 }
 
-// Write the given LogEntry to the given file handle.
-// History entry format is CSV with
-// `count`, `absolute path`, and `project label`
-func writeLogEntry(entry LogEntry, file *os.File) {
-	line := fmt.Sprintf(
-		"%d,%s,%s\n",
-		entry.Count,
-		entry.AbsolutePath,
-		entry.Label,
-	)
-	_, err := file.WriteString(line)
-	check(err)
+// Build an FZF listing and a listing index
+//
+// The `listing` is a slice of formatted labels (ansi-colored)
+// The `index` maps labels (without color codes) to abs paths.
+//
+// Return:
+// (0) a Source object to be passed to a finder's Read method
+// (1) the `index` mapping
+func searchListing(projects map[string]LogEntry) (source.Source, map[string]string) {
+	listing := []string{}
+	index := map[string]string{}
+
+	for _, project := range projects {
+		index[project.Label()] = project.AbsPath
+		listing = append(listing, project.LabelFormatted())
+	}
+
+	return source.Slice(listing), index
 }

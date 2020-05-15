@@ -58,7 +58,6 @@ Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 
 // WIP:
 // implement skip patterns
-// eliminate lossy path / label parsing
 // expiration strategy
 // profile & optimize
 
