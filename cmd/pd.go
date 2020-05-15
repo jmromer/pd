@@ -39,6 +39,7 @@ func SelectProject() {
 		"--bind 'ctrl-b:preview-up'",
 		"--bind 'ctrl-f:preview-down'",
 		"--cycle",
+		"--exact",
 		"--no-multi",
 		"--no-sort",
 		"--preview=\"pd --fzf-preview '{+}'\"",
