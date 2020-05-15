@@ -387,13 +387,18 @@ func projectLabelToAbsPath(label string) string {
 // Return:
 // (0) a Source object to be passed to a finder's Read method
 // (1) the `index` mapping
-func searchListing(projects map[string]LogEntry) (source.Source, map[string]string) {
+func searchListing(projectIndex map[string]LogEntry) (source.Source, map[string]string) {
+	logEntries := []LogEntry{}
+	for _, logEntry := range projectIndex {
+		logEntries = append(logEntries, logEntry)
+	}
+	sort.Sort(ByCount(logEntries))
+
 	listing := []string{}
 	index := map[string]string{}
-
-	for _, project := range projects {
-		index[project.Label()] = project.AbsPath
-		listing = append(listing, project.LabelFormatted())
+	for _, logEntry := range logEntries {
+		index[logEntry.Label()] = logEntry.AbsPath
+		listing = append(listing, logEntry.LabelFormatted())
 	}
 
 	return source.Slice(listing), index
