@@ -79,26 +79,6 @@ func SelectProject() {
 	RefreshLog(false)
 }
 
-// Build an FZF listing and a listing index
-//
-// The `listing` is a slice of formatted labels (ansi-colored)
-// The `index` maps labels (without color codes) to abs paths.
-//
-// Return:
-// (0) a Source object to be passed to a finder's Read method
-// (1) the `index` mapping
-func searchListing(projects map[string]LogEntry) (source.Source, map[string]string) {
-	listing := []string{}
-	index := map[string]string{}
-
-	for _, project := range projects {
-		index[project.Label()] = project.AbsPath
-		listing = append(listing, project.Formatted())
-	}
-
-	return source.Slice(listing), index
-}
-
 // FzfPreview triggers a preview (file listing) of the directory associated with
 // the given project label.
 //
@@ -381,6 +361,26 @@ func projectLabelToAbsPath(label string) string {
 	}
 
 	return filepath.Join(abspath, proj)
+}
+
+// Build an FZF listing and a listing index
+//
+// The `listing` is a slice of formatted labels (ansi-colored)
+// The `index` maps labels (without color codes) to abs paths.
+//
+// Return:
+// (0) a Source object to be passed to a finder's Read method
+// (1) the `index` mapping
+func searchListing(projects map[string]LogEntry) (source.Source, map[string]string) {
+	listing := []string{}
+	index := map[string]string{}
+
+	for _, project := range projects {
+		index[project.Label()] = project.AbsPath
+		listing = append(listing, project.Formatted())
+	}
+
+	return source.Slice(listing), index
 }
 
 // Write the given LogEntry to the given file handle.
