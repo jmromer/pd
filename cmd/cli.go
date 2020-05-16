@@ -79,7 +79,7 @@ var rootCmd = &cobra.Command{
 			fmt.Println(help)
 		case strings.HasPrefix(target, "--fzf-preview"):
 			label := strings.Replace(target, "--fzf-preview", "", 1)
-			FzfPreview(strings.Trim(label, " "))
+			FzfPreview(label)
 		case target == "--pd-refresh":
 			RefreshLog(true)
 		case dirStackFlag.MatchString(target):

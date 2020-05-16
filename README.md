@@ -37,8 +37,8 @@ cd() {
     builtin cd "$(pd "$1")" || return
 }
 
-# ctrl-o to change directories with pd
-bindkey -s '^o' 'cd\n'
+# ^g cd with pd
+bindkey -s '^g' 'cd\n'
 ```
 
 Usage
