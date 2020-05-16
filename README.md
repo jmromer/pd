@@ -37,8 +37,8 @@ cd() {
     builtin cd "$(pd "$1")" || return
 }
 
-# ^g cd with pd
-bindkey -s '^g' 'cd\n'
+# ^h cd with pd
+bindkey -s '^h' 'cd\n'
 ```
 
 Usage
