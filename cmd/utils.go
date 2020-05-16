@@ -24,7 +24,15 @@ import (
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
 )
+
+func ensureDirExists(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		check(err)
+	}
+}
 
 // Exists returns true if the given file or directory exists, else false.
 func exists(path string) bool {
@@ -36,11 +44,10 @@ func exists(path string) bool {
 // Expand placeholders like `.` and `~` to their canonical form.
 // Return the home directory if given the empty string.
 func expandPath(path string) string {
-	path = filepath.Clean(path)
-	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", homeDir(), 1)
-	}
-	abspath, err := filepath.Abs(path)
+	path = filepath.Clean(strings.Trim(path, " "))
+	expanded, err := homedir.Expand(path)
+	check(err)
+	abspath, err := filepath.Abs(expanded)
 	check(err)
 	return abspath
 }
@@ -57,6 +64,18 @@ func workingDir() string {
 	pwd, err := os.Getwd()
 	check(err)
 	return pwd
+}
+
+// Return the current user's pd config directory
+// Create it if it doesn't already exist
+func configDir() string {
+	configsDir := os.Getenv("XDG_CONFIG_HOME")
+	if configsDir == "" {
+		configsDir = os.ExpandEnv("$HOME/.config")
+	}
+	configDir := filepath.Join(configsDir, "pd")
+	ensureDirExists(configDir)
+	return configDir
 }
 
 // Return true if the given path is a project.
@@ -79,8 +98,21 @@ func isProjectile(path string) bool {
 // if there's an error, print it out and exit with a failure exit code.
 func check(err error) {
 	if err != nil {
+		fmt.Println("[pd] Encountered an error.")
 		fmt.Println(err.Error())
 		os.Exit(1)
+	}
+}
+
+// if there's a problem reading the config file, exit
+func checkConfigFile(err error) {
+	if err == nil {
+		return
+	}
+	_, ok := err.(viper.ConfigFileNotFoundError)
+	if !ok {
+		// Config file was found but another error was produced
+		check(err)
 	}
 }
 
@@ -140,4 +172,17 @@ func capturedOutput(cmd *exec.Cmd) (string, error) {
 	}
 
 	return output, err
+}
+
+func toSkipDirSet(strs []string) map[string]bool {
+	set := map[string]bool{}
+
+	for _, str := range strs {
+		expanded, err := homedir.Expand(str)
+		if err == nil {
+			set[expanded] = true
+		}
+	}
+
+	return set
 }
