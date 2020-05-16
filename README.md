@@ -96,8 +96,8 @@ p/d is written in [Go][] based on a prototype in [Ruby][].
 It builds upon prior art by [junegunn][] ([fzf][]) and [b4b4r07][]
 ([go-finder][]).
 
-[ascii-svg]: https://asciinema.org/a/330578.svg
-[ascii]: https://asciinema.org/a/330578
+[ascii-svg]: https://asciinema.org/a/330647.svg
+[ascii]: https://asciinema.org/a/330647
 [b4b4r07]: https://github.com/b4b4r07
 [fzf]: https://github.com/junegunn/fzf
 [go-finder]: https://github.com/b4b4r07/go-finder
