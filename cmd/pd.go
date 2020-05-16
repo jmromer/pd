@@ -190,11 +190,8 @@ func collectUserProjects() []string {
 	if debug {
 		fmt.Println("Finding project directories...")
 	}
+
 	projects := []string{}
-	skipDirs := map[string]bool{
-		// TODO: Add config file knob for this
-		os.ExpandEnv("$HOME/Library"): true,
-	}
 
 	filepath.Walk(
 		homeDir(),
@@ -401,6 +398,7 @@ func searchListing(projectIndex map[string]LogEntry) (source.Source, map[string]
 
 	listing := []string{}
 	index := map[string]string{}
+
 	for _, logEntry := range logEntries {
 		index[logEntry.Label()] = logEntry.AbsPath
 		listing = append(listing, logEntry.LabelFormatted())

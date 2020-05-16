@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -57,12 +58,11 @@ Given no arguments, open FZF to allow fuzzy-selecting a directory to cd into.
 `
 
 // WIP:
-// implement skip patterns
 // expiration strategy
 // profile & optimize
 
-var cfgFile string
 var historyFile string
+var skipDirs map[string]bool
 var debug bool
 
 var rootCmd = &cobra.Command{
@@ -97,9 +97,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 }
 
-// Execute adds all child commands to the root command and sets flags
-// appropriately. This is called by main.main(). It only needs to happen once to
-// the rootCmd.
+// Execute is called by main.main().
+// It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	check(err)
@@ -107,9 +106,23 @@ func Execute() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.AddConfigPath(homeDir())
-	viper.SetConfigName(".pdrc")
-	viper.ReadInConfig()
+	configPath := configDir()
 
-	historyFile = expandPath("~/.pd_history")
+	// config defaults
+	viper.SetDefault("history_filepath", filepath.Join(configPath, "history"))
+	viper.SetDefault("debug", false)
+	viper.SetDefault("skip_dirs", []string{"~/Library/"})
+
+	// source config from file if available
+	viper.AddConfigPath(configPath)
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+
+	err := viper.ReadInConfig()
+	checkConfigFile(err)
+
+	// Set configurable values
+	debug = viper.GetBool("debug")
+	historyFile = expandPath(viper.GetString("history_filepath"))
+	skipDirs = toSkipDirSet(viper.GetStringSlice("skip_dirs"))
 }
