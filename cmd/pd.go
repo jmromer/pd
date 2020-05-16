@@ -335,7 +335,7 @@ func (a ByCount) Len() int      { return len(a) }
 func (a ByCount) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByCount) Less(i, j int) bool {
 	if a[j].Count == a[i].Count {
-		return a[i].Label() < a[j].Label()
+		return strings.ToLower(a[i].Name) < strings.ToLower(a[j].Name)
 	}
 	return a[j].Count < a[i].Count
 }
@@ -348,7 +348,7 @@ func (a ByName) Less(i, j int) bool {
 	if a[i].Name == a[j].Name {
 		return a[i].Path < a[j].Path
 	}
-	return a[i].Name < a[j].Name
+	return strings.ToLower(a[i].Name) < strings.ToLower(a[j].Name)
 }
 
 // Given an absolute path, parse out a project label and return a new LogEntry.
