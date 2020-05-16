@@ -134,7 +134,7 @@ func RefreshLog(searchForProjects bool) {
 	// keep only those found projects not currently in the log
 	entries := collectEntries(projects, logEntries)
 
-	refreshProjectListing(entries)
+	writeLogEntries(entries)
 }
 
 // ChangeDirectory resolves the given path to an absolute path
@@ -273,7 +273,7 @@ func collectEntries(foundPaths []string, currEntries map[string]LogEntry) (entri
 
 // Refresh the pd history file
 // Re-aggregate and re-rank entries, remove directories that no longer exist.
-func refreshProjectListing(entries []LogEntry) {
+func writeLogEntries(entries []LogEntry) {
 	if debug {
 		fmt.Println("Refreshing project listing...")
 	}
@@ -283,9 +283,6 @@ func refreshProjectListing(entries []LogEntry) {
 	check(err)
 	defer f.Close()
 
-	// aggregate log entries, sorting by count in desc order
-	// write sorted entries to log
-	sort.Sort(ByCount(entries))
 	for _, entry := range entries {
 		entry.WriteLogLine(f)
 	}
@@ -331,11 +328,28 @@ func (e LogEntry) WriteLogLine(file *os.File) {
 	}
 }
 
+// Sorting interfaces
 type ByCount []LogEntry
 
-func (a ByCount) Len() int           { return len(a) }
-func (a ByCount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByCount) Less(i, j int) bool { return a[j].Count < a[i].Count }
+func (a ByCount) Len() int      { return len(a) }
+func (a ByCount) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByCount) Less(i, j int) bool {
+	if a[j].Count == a[i].Count {
+		return a[i].Label() < a[j].Label()
+	}
+	return a[j].Count < a[i].Count
+}
+
+type ByName []LogEntry
+
+func (a ByName) Len() int      { return len(a) }
+func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByName) Less(i, j int) bool {
+	if a[i].Name == a[j].Name {
+		return a[i].Path < a[j].Path
+	}
+	return a[i].Name < a[j].Name
+}
 
 // Given an absolute path, parse out a project label and return a new LogEntry.
 func buildLogEntry(abspath string) LogEntry {
@@ -394,6 +408,7 @@ func searchListing(projectIndex map[string]LogEntry) (source.Source, map[string]
 	for _, logEntry := range projectIndex {
 		logEntries = append(logEntries, logEntry)
 	}
+	sort.Sort(ByName(logEntries))
 	sort.Sort(ByCount(logEntries))
 
 	listing := []string{}
