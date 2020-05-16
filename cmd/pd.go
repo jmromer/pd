@@ -42,7 +42,7 @@ func SelectProject() {
 		"--exact",
 		"--no-multi",
 		"--no-sort",
-		"--preview=\"pd --fzf-preview '{+}'\"",
+		`--preview="pd --fzf-preview "{+}""`,
 		"--reverse",
 		"--tiebreak=index",
 	)
@@ -359,11 +359,16 @@ func buildLogEntry(abspath string) LogEntry {
 // Given a project label, re-construct the absolute path that was used to
 // generate it.
 func projectLabelToAbsPath(label string) string {
-	comps := strings.Split(label, " ~/")
+	label = strings.Trim(label, " ")
+
+	if label == "~" {
+		return homeDir()
+	}
+
+	comps := strings.Split(label, " ~")
 	if len(comps) > 1 {
 		projName := comps[0]
 		pathLabel := comps[1]
-
 		path := fmt.Sprintf("%s/%s", homeDir(), pathLabel)
 		return filepath.Join(path, projName)
 	}
