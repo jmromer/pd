@@ -69,13 +69,25 @@ func workingDir() string {
 // Return the current user's pd config directory
 // Create it if it doesn't already exist
 func configDir() string {
-	configsDir := os.Getenv("XDG_CONFIG_HOME")
-	if configsDir == "" {
-		configsDir = os.ExpandEnv("$HOME/.config")
+	xdgDir := os.Getenv("XDG_CONFIG_HOME")
+	if xdgDir == "" {
+		xdgDir = os.ExpandEnv("$HOME/.config")
 	}
-	configDir := filepath.Join(configsDir, "pd")
+	configDir := filepath.Join(xdgDir, "pd")
 	ensureDirExists(configDir)
 	return configDir
+}
+
+// Return the current user's pd state directory
+// Create it if it doesn't already exist
+func stateDir() string {
+	xdgDir := os.Getenv("XDG_STATE_HOME")
+	if xdgDir == "" {
+		xdgDir = os.ExpandEnv("$HOME/.state")
+	}
+	stateDir := filepath.Join(xdgDir, "pd")
+	ensureDirExists(stateDir)
+	return stateDir
 }
 
 // Return true if the given path is a project.

@@ -107,9 +107,10 @@ func Execute() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	configPath := configDir()
+	statePath := stateDir()
 
 	// config defaults
-	viper.SetDefault("history_filepath", filepath.Join(configPath, "history"))
+	viper.SetDefault("history_filepath", filepath.Join(statePath, "history"))
 	viper.SetDefault("debug", false)
 	viper.SetDefault("skip_dirs", []string{"~/Library/"})
 
