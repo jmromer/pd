@@ -1,11 +1,11 @@
 /*
-Copyright © 2020 Jake Romer <mail@jakeromer.com>
+Copyright © 2023 Jake Romer <jmromer@tensorconclave.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -60,10 +60,13 @@ func homeDir() string {
 }
 
 // Return the current user's current working directory.
+// If there's an error, return the home directory.
 func workingDir() string {
 	pwd, err := os.Getwd()
-	check(err)
-	return pwd
+	if err == nil {
+		return pwd
+	}
+	return homeDir()
 }
 
 // Return the current user's pd config directory
@@ -110,7 +113,7 @@ func isProjectile(path string) bool {
 // if there's an error, print it out and exit with a failure exit code.
 func check(err error) {
 	if err != nil {
-		fmt.Println("[pd] Encountered an error.")
+		fmt.Println("[pd] Encountered an error: ")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
