@@ -18,6 +18,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -147,7 +148,12 @@ func ChangeDirectory(target string) {
 }
 
 // Append a log entry for the the given absolute path to the pd history file
+// Skip if the given path is the home directory, since we always
+// display the home directory first in the listing.
 func addLogEntry(abspath string) {
+	if abspath == homeDir() {
+		return
+	}
 	f, err := os.OpenFile(
 		expandPath(historyFile),
 		os.O_APPEND|os.O_WRONLY,
@@ -367,6 +373,18 @@ func buildLogEntry(abspath string) LogEntry {
 	}
 }
 
+// Build a LogEntry for the home directory
+// This is used to represent the home directory in the FZF interface.
+// Assign it the maximum possible count so that it always appears first.
+func buildHomeLogEntry() LogEntry {
+	return LogEntry{
+		Count:   math.MaxInt32,
+		AbsPath: homeDir(),
+		Name:    "~",
+		Path:    "",
+	}
+}
+
 // Given a project label, re-construct the absolute path that was used to
 // generate it.
 func projectLabelToAbsPath(label string) string {
@@ -405,9 +423,12 @@ func projectLabelToAbsPath(label string) string {
 // (1) the `index` mapping
 func searchListing(projectIndex map[string]LogEntry) (source.Source, map[string]string) {
 	logEntries := []LogEntry{}
+
+	logEntries = append(logEntries, buildHomeLogEntry())
 	for _, logEntry := range projectIndex {
 		logEntries = append(logEntries, logEntry)
 	}
+
 	sort.Sort(ByName(logEntries))
 	sort.Sort(ByCount(logEntries))
 
