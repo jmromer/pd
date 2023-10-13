@@ -134,6 +134,8 @@ func RefreshLog(searchForProjects bool) {
 
 	// keep only those found projects not currently in the log
 	entries := collectEntries(projects, logEntries)
+	sort.Sort(ByName(entries))
+	sort.Sort(ByCount(entries))
 
 	writeLogEntries(entries)
 }
