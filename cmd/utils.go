@@ -131,17 +131,15 @@ func checkConfigFile(err error) {
 	}
 }
 
-// List the contents of `path` using exa.
-func listFilesExa(path string, abbreviated string) (string, error) {
+// List the contents of `path` using eza.
+func listFilesEza(path string, abbreviated string) (string, error) {
 	fmt.Println(abbreviated)
 	cmd := exec.Command(
-		"exa",
+		"eza",
 		"--all",
 		"--color=always",
-		"--git",
 		"--group-directories-first",
-		"--header",
-		"--long",
+		"-1",
 		path,
 	)
 	return capturedOutput(cmd)
@@ -149,14 +147,13 @@ func listFilesExa(path string, abbreviated string) (string, error) {
 
 // List the contents of `path` using ls.
 func listFilesLs(path string, abbreviated string) (string, error) {
-	fmt.Println(abbreviated)
 	cmd := exec.Command(
 		"ls",
 		"--almost-all",
 		"--color=always",
 		"--group-directories-first",
 		"--human-readable",
-		"-l",
+		"-1",
 		path,
 	)
 	return capturedOutput(cmd)

@@ -87,8 +87,8 @@ func SelectProject() {
 // the given project label.
 //
 // List the files in the directory associated with the given project label.
-// Used in the FZF preview window. Attempts to do this using exa, then tree if
-// exa is unavailable or fails. Falls back to ls if both fail.
+// Used in the FZF preview window. Attempts to do this using eza, then tree if
+// eza is unavailable or fails. Falls back to ls if both fail.
 //
 // Examples:
 // pd --fzf-preview my-project Documents/projects
@@ -96,7 +96,7 @@ func SelectProject() {
 func FzfPreview(label string) {
 	abspath := projectLabelToAbsPath(label)
 	abbreviated := strings.Replace(abspath, homeDir(), "~", 1)
-	list, err := listFilesExa(abspath, abbreviated)
+	list, err := listFilesEza(abspath, abbreviated)
 
 	switch {
 	case err != nil:
